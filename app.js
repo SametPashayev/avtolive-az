@@ -1314,7 +1314,7 @@ function updateAuthUI() {
 }
 
 function switchAuthTab(mode) {
-  ["sms", "login", "register"].forEach(m => {
+  ["login", "register", "email_otp"].forEach(m => {
     const tab = document.getElementById("authTab_" + m);
     const pane = document.getElementById("authPane_" + m);
     if (tab) tab.classList.toggle("active", m === mode);
@@ -1322,7 +1322,7 @@ function switchAuthTab(mode) {
   });
 }
 
-function openAuthModal(defaultTab = "sms") {
+function openAuthModal(defaultTab = "login") {
   const body = document.getElementById("authModalBody");
   if (state.user) {
     const myAds = state.listings.filter(c => c.user_id === state.user.id);
@@ -1358,12 +1358,12 @@ function openAuthModal(defaultTab = "sms") {
       </div>
     `;
   } else {
-    const initialMode = (defaultTab === "register" || defaultTab === "login" || defaultTab === "sms") ? defaultTab : "sms";
+    const initialMode = (defaultTab === "register" || defaultTab === "email_otp") ? defaultTab : "login";
     body.innerHTML = `
       <div style="margin-bottom:16px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:0.8rem;">
           <strong>Test Üçün Sürətli Giriş:</strong><br/>
-          Baku Luxury Motors (150 ₼ balans)
+          Baku Luxury Motors (rashad@avtolive.az)
         </div>
         <button class="btn-success" style="padding:7px 12px;font-size:0.78rem;" onclick="quickDemoLogin()">
           1 Kliklə Daxil Ol
@@ -1371,47 +1371,56 @@ function openAuthModal(defaultTab = "sms") {
       </div>
 
       <div class="condition-tabs" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:18px;">
-        <button type="button" class="cond-tab" id="authTab_sms" onclick="switchAuthTab('sms')">SMS Kod</button>
-        <button type="button" class="cond-tab" id="authTab_login" onclick="switchAuthTab('login')">Parolla Giriş</button>
-        <button type="button" class="cond-tab" id="authTab_register" onclick="switchAuthTab('register')">Qeydiyyat</button>
+        <button type="button" class="cond-tab" id="authTab_login" onclick="switchAuthTab('login')">E-poçtla Giriş</button>
+        <button type="button" class="cond-tab" id="authTab_email_otp" onclick="switchAuthTab('email_otp')">E-poçta Kod</button>
+        <button type="button" class="cond-tab" id="authTab_register" onclick="switchAuthTab('register')">Yeni Qeydiyyat</button>
       </div>
 
-      <div id="authPane_sms" style="display:none;">
-        <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
-          Telefon nömrənizi daxil edin, nömrənizə 4 rəqəmli SMS təsdiq kodu göndəriləcək.
-        </p>
-        <form onsubmit="handleSendOtp(event)" style="display:flex;flex-direction:column;gap:12px;">
-          <input type="text" class="form-input" id="otpFullName" placeholder="Adınız (Yeni hesab üçün)" />
-          <div style="display:flex;gap:8px;">
-            <input type="text" class="form-input" id="otpPhone" value="+994 50 " placeholder="+994 50 123 45 67" required />
-            <button type="submit" class="btn-primary" style="white-space:nowrap;">SMS Kod Göndər</button>
-          </div>
-        </form>
-
-        <form id="otpVerifyBox" onsubmit="handleVerifyOtp(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(225,29,72,0.1);border:1px solid rgba(225,29,72,0.35);border-radius:12px;">
-          <div style="font-size:0.82rem;color:#fda4af;font-weight:700;" id="otpSentHint">
-            4 rəqəmli SMS kod göndərildi
-          </div>
-          <input type="text" class="form-input" id="otpCodeInput" placeholder="4 rəqəmli SMS kod" maxlength="6" style="font-size:1.15rem;font-weight:800;letter-spacing:4px;text-align:center;" required />
-          <button type="submit" class="btn-success" style="justify-content:center;">Kodu Təsdiqlə və Daxil Ol</button>
-        </form>
-      </div>
-
+      <!-- TAB 1: Standard Email & Password Login -->
       <div id="authPane_login" style="display:none;">
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+          Qeydiyyatdan keçdiyiniz e-poçt ünvanı və parolunuzla daxil olun.
+        </p>
         <form onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:12px;">
-          <input type="email" class="form-input" id="loginEmail" placeholder="E-poçt (məs: rashad@avtolive.az)" required />
-          <input type="password" class="form-input" id="loginPass" placeholder="Parol (123456)" required />
+          <input type="email" class="form-input" id="loginEmail" placeholder="E-poçt ünvanınız (məs: adiniz@gmail.com)" required />
+          <input type="password" class="form-input" id="loginPass" placeholder="Parolunuz" required />
           <button type="submit" class="btn-primary" style="justify-content:center;">Hesaba Daxil Ol</button>
         </form>
       </div>
 
+      <!-- TAB 2: 100% Free 4-Digit Email Verification Code Login -->
+      <div id="authPane_email_otp" style="display:none;">
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+          Parolsuz giriş: E-poçt ünvanınızı yazın, e-poçtunuza 4 rəqəmli təsdiq kodu göndəriləcək (100% Pulsuz).
+        </p>
+        <form onsubmit="handleSendEmailOtp(event)" style="display:flex;flex-direction:column;gap:12px;">
+          <input type="text" class="form-input" id="otpFullName" placeholder="Ad və Soyadınız" />
+          <div style="display:flex;gap:8px;">
+            <input type="email" class="form-input" id="otpEmail" placeholder="E-poçt ünvanınız (məs: ad@gmail.com)" required />
+            <button type="submit" class="btn-primary" id="btnSendEmailCode" style="white-space:nowrap;">Kod Göndər</button>
+          </div>
+        </form>
+
+        <form id="otpVerifyBox" onsubmit="handleVerifyEmailOtp(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(225,29,72,0.1);border:1px solid rgba(225,29,72,0.35);border-radius:12px;">
+          <div style="font-size:0.82rem;color:#fda4af;font-weight:700;" id="otpSentHint">
+            4 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi.
+          </div>
+          <input type="text" class="form-input" id="otpCodeInput" placeholder="4 rəqəmli kodu daxil edin" maxlength="6" style="font-size:1.15rem;font-weight:800;letter-spacing:4px;text-align:center;" required />
+          <button type="submit" class="btn-success" style="justify-content:center;">Kodu Təsdiqlə və Daxil Ol</button>
+        </form>
+      </div>
+
+      <!-- TAB 3: Full Email Registration -->
       <div id="authPane_register" style="display:none;">
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+          E-poçt ünvanınızla pulsuz hesab yaradın və dərhal elan yerləşdirin.
+        </p>
         <form onsubmit="handleRegister(event)" style="display:flex;flex-direction:column;gap:12px;">
-          <input type="text" class="form-input" id="regName" placeholder="Ad və Soyad / Avtosalon Adı *" required />
-          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Telefon nömrəsi *" required />
-          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanı *" required />
-          <input type="password" class="form-input" id="regPass" placeholder="Parol təyin edin *" required />
-          <button type="submit" class="btn-success" style="justify-content:center;">Qeydiyyatı Tamamla (+50 ₼ Bonus)</button>
+          <input type="text" class="form-input" id="regName" placeholder="Ad və Soyad (və ya Avtosalon Adı) *" required />
+          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Giriş üçün) *" required />
+          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda alıcıların zəng etməsi üçün) *" required />
+          <input type="password" class="form-input" id="regPass" placeholder="Parol təyin edin (min. 6 simvol) *" required />
+          <button type="submit" class="btn-success" style="justify-content:center;">E-poçt ilə Qeydiyyatdan Keç (+50 ₼ Bonus)</button>
         </form>
       </div>
     `;
@@ -1420,43 +1429,45 @@ function openAuthModal(defaultTab = "sms") {
   document.getElementById("authModal").classList.add("open");
 }
 
-async function handleSendOtp(e) {
+async function handleSendEmailOtp(e) {
   e.preventDefault();
-  const phone = document.getElementById("otpPhone").value.trim();
+  const email = document.getElementById("otpEmail").value.trim().toLowerCase();
+  const btn = document.getElementById("btnSendEmailCode");
+  if (btn) btn.textContent = "Göndərilir...";
+
   let generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
+  localStorage.setItem("avtolive_pending_email_otp_" + email, generatedOtp);
+
   try {
-    const res = await fetch("/api/auth/send-otp", {
+    await fetch("/api/auth/send-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ email, code: generatedOtp })
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.demo_otp) generatedOtp = data.demo_otp;
-    }
   } catch (err) {
-    // Cloudflare / GitHub Pages mode
+    // Static mode
   }
-  localStorage.setItem("avtolive_pending_otp_" + phone, generatedOtp);
+
+  if (btn) btn.textContent = "Yenidən Göndər";
   const verifyBox = document.getElementById("otpVerifyBox");
   verifyBox.style.display = "flex";
   document.getElementById("otpCodeInput").value = "";
   document.getElementById("otpCodeInput").focus();
-  document.getElementById("otpSentHint").innerHTML = `Təsdiq kodu <strong>${phone}</strong> nömrəsinə SMS olaraq göndərildi. Lütfən telefonunuza gələn 4 rəqəmli kodu daxil edin.`;
-  showToast(`Təsdiq kodu ${phone} nömrəsinə SMS ilə göndərildi.`);
+  document.getElementById("otpSentHint").innerHTML = `4 rəqəmli təsdiq kodu <strong>${email}</strong> ünvanına göndərildi. Lütfən e-poçtunuza gələn kodu daxil edin.`;
+  showToast(`Təsdiq kodu ${email} ünvanına göndərildi.`);
 }
 
-async function handleVerifyOtp(e) {
+async function handleVerifyEmailOtp(e) {
   e.preventDefault();
-  const phone = document.getElementById("otpPhone").value.trim();
+  const email = document.getElementById("otpEmail").value.trim().toLowerCase();
   const code = document.getElementById("otpCodeInput").value.trim();
-  const full_name = document.getElementById("otpFullName").value.trim() || `İstifadəçi (${phone.slice(-4)})`;
+  const full_name = document.getElementById("otpFullName").value.trim() || email.split("@")[0];
 
   try {
-    const res = await fetch("/api/auth/verify-otp", {
+    const res = await fetch("/api/auth/verify-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, code, full_name })
+      body: JSON.stringify({ email, code, full_name })
     });
     if (res.ok) {
       const data = await res.json();
@@ -1467,22 +1478,20 @@ async function handleVerifyOtp(e) {
         localStorage.setItem("avtolive_user", JSON.stringify(data.user));
         updateAuthUI();
         closeModal("authModal");
-        showToast(`Nömrə təsdiqləndi. Xoş gəldiniz, ${data.user.full_name}`);
+        showToast(`E-poçt təsdiqləndi. Xoş gəldiniz, ${data.user.full_name}`);
         return;
       }
     }
-  } catch (err) {
-    // Fallback to client verification on GitHub/Cloudflare Pages
-  }
+  } catch (err) {}
 
-  const savedOtp = localStorage.getItem("avtolive_pending_otp_" + phone);
+  const savedOtp = localStorage.getItem("avtolive_pending_email_otp_" + email);
   if (code === savedOtp || code === "8899" || code.length === 4) {
     const initials = full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "AL";
     const localUser = {
       id: Date.now(),
       full_name,
-      email: `user_${phone.replace(/\D/g, "").slice(-4)}@avtolive.az`,
-      phone,
+      email,
+      phone: "+994 50 000 00 00",
       role: "seller",
       balance: 50,
       avatar: initials
@@ -1493,9 +1502,9 @@ async function handleVerifyOtp(e) {
     localStorage.setItem("avtolive_user", JSON.stringify(localUser));
     updateAuthUI();
     closeModal("authModal");
-    showToast(`Nömrə təsdiqləndi. Xoş gəldiniz, ${localUser.full_name}`);
+    showToast(`E-poçt təsdiqləndi. Xoş gəldiniz, ${localUser.full_name}`);
   } else {
-    showToast("SMS təsdiq kodu yanlışdır");
+    showToast("Təsdiq kodu yanlışdır");
   }
 }
 

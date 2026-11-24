@@ -559,45 +559,45 @@ class AvtoLiveHandler(SimpleHTTPRequestHandler):
         except Exception:
             return self.send_json({"error": "Invalid JSON"}, 400)
 
-        if path == "/api/auth/send-otp":
-            phone = data.get("phone", "").strip()
-            if not phone or len(phone) < 7:
-                return self.send_json({"error": "Telefon nömrəsini düzgün daxil edin"}, 400)
+        if path == "/api/auth/send-email-otp":
+            email = data.get("email", "").strip().lower()
+            if not email or "@" not in email:
+                return self.send_json({"error": "Düzgün e-poçt ünvanı daxil edin"}, 400)
             otp_code = str(secrets.randbelow(9000) + 1000)
             conn = get_db()
             cur = conn.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS otp_codes (phone TEXT PRIMARY KEY, code TEXT, created_at TEXT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS email_otp_codes (email TEXT PRIMARY KEY, code TEXT, created_at TEXT)")
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cur.execute("INSERT OR REPLACE INTO otp_codes (phone, code, created_at) VALUES (?, ?, ?)", (phone, otp_code, now))
+            cur.execute("INSERT OR REPLACE INTO email_otp_codes (email, code, created_at) VALUES (?, ?, ?)", (email, otp_code, now))
             conn.commit()
             conn.close()
-            # In test/local mode we return demo_otp so the owner can test SMS verification immediately.
-            # In production, plug MSM.az / LSIM / Twilio API key here.
-            return self.send_json({"sent": True, "phone": phone, "demo_otp": otp_code})
+            return self.send_json({"sent": True, "email": email})
 
-        if path == "/api/auth/verify-otp":
-            phone = data.get("phone", "").strip()
+        if path == "/api/auth/verify-email-otp":
+            email = data.get("email", "").strip().lower()
             code = data.get("code", "").strip()
-            full_name = data.get("full_name", "").strip() or f"İstifadəçi ({phone[-4:]})"
+            full_name = data.get("full_name", "").strip() or email.split("@")[0].capitalize()
+            phone = data.get("phone", "").strip() or "+994 50 000 00 00"
+            password = data.get("password", "").strip() or code
+
             conn = get_db()
             cur = conn.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS otp_codes (phone TEXT PRIMARY KEY, code TEXT, created_at TEXT)")
-            cur.execute("SELECT code FROM otp_codes WHERE phone = ?", (phone,))
+            cur.execute("CREATE TABLE IF NOT EXISTS email_otp_codes (email TEXT PRIMARY KEY, code TEXT, created_at TEXT)")
+            cur.execute("SELECT code FROM email_otp_codes WHERE email = ?", (email,))
             row = cur.fetchone()
-            if not row or (row["code"] != code and code != "8899"):
+            if not row or row["code"] != code:
                 conn.close()
-                return self.send_json({"error": "SMS təsdiq kodu yanlışdır"}, 401)
+                return self.send_json({"error": "E-poçt təsdiq kodu yanlışdır"}, 401)
 
-            cur.execute("SELECT * FROM users WHERE phone = ?", (phone,))
+            cur.execute("SELECT * FROM users WHERE LOWER(email) = ?", (email,))
             user_row = cur.fetchone()
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             if not user_row:
                 initials = "".join([w[0].upper() for w in full_name.split()[:2]]) or "AL"
-                email_auto = f"user_{secrets.token_hex(3)}@avtolive.az"
                 cur.execute("""
                     INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (full_name, email_auto, phone, hash_password(code), "seller", "", 50.0, 1, initials, now))
+                """, (full_name, email, phone, hash_password(password), "seller", "", 50.0, 1, initials, now))
                 user_id = cur.lastrowid
             else:
                 user_id = user_row["id"]
