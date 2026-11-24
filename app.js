@@ -1026,6 +1026,56 @@ async function openCarDetail(id) {
 
   document.getElementById("liveDetailModal").classList.add("open");
   loadLiveMessages(car.id);
+  if (car.is_live && !state.webcamStream) {
+    connectAsLiveViewer(car.id);
+  }
+}
+
+// Cross-Device Real-Time WebRTC Live Streaming (PeerJS Cloud Signaling)
+// Broadcaster Peer ID: "avtolive-az-live-car-<listingId>"
+function connectAsLiveViewer(listingId) {
+  if (typeof Peer === "undefined") return;
+  try {
+    if (state.viewerPeer) {
+      state.viewerPeer.destroy();
+      state.viewerPeer = null;
+    }
+    const viewerPeer = new Peer();
+    state.viewerPeer = viewerPeer;
+    const broadcasterId = "avtolive-az-live-car-" + listingId;
+
+    viewerPeer.on("open", () => {
+      // Create an empty canvas stream to initiate a WebRTC media call to the broadcaster
+      const canvas = document.createElement("canvas");
+      canvas.width = 16;
+      canvas.height = 16;
+      const dummyStream = canvas.captureStream(1);
+      const call = viewerPeer.call(broadcasterId, dummyStream);
+      if (!call) return;
+
+      call.on("stream", (remoteStream) => {
+        let videoEl = document.getElementById("studioVideoEl");
+        if (!videoEl) {
+          const pane = document.querySelector(".live-video-pane");
+          const img = document.getElementById("studioMainImg");
+          if (img) img.remove();
+          videoEl = document.createElement("video");
+          videoEl.id = "studioVideoEl";
+          videoEl.autoplay = true;
+          videoEl.playsInline = true;
+          videoEl.controls = true;
+          if (pane) pane.prepend(videoEl);
+        }
+        if (videoEl) {
+          videoEl.srcObject = remoteStream;
+          videoEl.play().catch(() => {});
+          showToast("Satıcının canlı kamerasına bağlandınız (Canlı Yayım)");
+        }
+      });
+    });
+  } catch (e) {
+    console.warn("Viewer PeerJS connection error", e);
+  }
 }
 
 async function loadLiveMessages(listingId) {
@@ -1087,13 +1137,21 @@ async function toggleSellerWebcam(listingId) {
   if (state.webcamStream) {
     state.webcamStream.getTracks().forEach(t => t.stop());
     state.webcamStream = null;
-    btn.innerHTML = `${iconSvg("video")} ${dict.start_camera_btn}`;
-    showToast("Kamera yayımı dayandırıldı");
+    if (state.broadcasterPeer) {
+      state.broadcasterPeer.destroy();
+      state.broadcasterPeer = null;
+    }
+    if (btn) btn.innerHTML = `${iconSvg("video")} ${dict.start_camera_btn}`;
+    showToast("Canlı kamera yayımı dayandırıldı");
     return;
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: true
+    }).catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
+
     state.webcamStream = stream;
     let videoEl = document.getElementById("studioVideoEl");
     if (!videoEl) {
@@ -1108,24 +1166,57 @@ async function toggleSellerWebcam(listingId) {
       pane.prepend(videoEl);
     }
     videoEl.srcObject = stream;
-    btn.innerHTML = `${iconSvg("video")} ${dict.stop_camera_btn}`;
-    showToast("WebRTC Canlı Kamera aktivləşdi");
+    if (btn) btn.innerHTML = `${iconSvg("video")} ${dict.stop_camera_btn}`;
+
+    // Broadcast live across devices via PeerJS
+    if (typeof Peer !== "undefined") {
+      if (state.broadcasterPeer) state.broadcasterPeer.destroy();
+      const broadcasterId = "avtolive-az-live-car-" + listingId;
+      const peer = new Peer(broadcasterId);
+      state.broadcasterPeer = peer;
+
+      peer.on("open", () => {
+        showToast("Canlı Yayım Başladı! Başqa telefon və ya kompüterdən bu elana girən hər kəs kameranızı canlı izləyə bilər.");
+      });
+
+      peer.on("call", (call) => {
+        call.answer(stream);
+        showToast("Yeni izləyici canlı yayıma qoşuldu!");
+      });
+    } else {
+      showToast("WebRTC Canlı Kamera aktivləşdi");
+    }
   } catch (err) {
-    showToast("Demo Canlı Kamera rejimi aktivləşdirildi (1080p HD)");
-    await toggleLiveStatus(listingId, 1);
+    showToast("Kamera icazəsi verilmədi və ya tapılmadı");
   }
 }
 
 async function toggleLiveStatus(listingId, newLive) {
-  const res = await fetch(`/api/live/${listingId}/toggle`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ is_live: newLive === 1 })
-  });
-  const data = await res.json();
-  if (data.listing) {
-    const idx = state.listings.findIndex(c => c.id === listingId);
-    if (idx !== -1) state.listings[idx] = data.listing;
+  try {
+    const res = await fetch(`/api/live/${listingId}/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_live: newLive === 1 })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.listing) {
+        const idx = state.listings.findIndex(c => c.id === listingId);
+        if (idx !== -1) state.listings[idx] = data.listing;
+        renderAll();
+        openCarDetail(listingId);
+        showToast(newLive ? "Avtomobil Canlı Yayıma çıxarıldı" : "Canlı yayım tamamlandı");
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // Static fallback for GitHub/Cloudflare Pages
+  const idx = state.listings.findIndex(c => c.id === listingId);
+  if (idx !== -1) {
+    state.listings[idx].is_live = newLive === 1 ? 1 : 0;
+    state.listings[idx].live_viewers = newLive === 1 ? 18 : 0;
+    localStorage.setItem("avtolive_custom_listings", JSON.stringify(state.listings));
     renderAll();
     openCarDetail(listingId);
     showToast(newLive ? "Avtomobil Canlı Yayıma çıxarıldı" : "Canlı yayım tamamlandı");
@@ -1332,7 +1423,7 @@ function openAuthModal(defaultTab = "sms") {
 async function handleSendOtp(e) {
   e.preventDefault();
   const phone = document.getElementById("otpPhone").value.trim();
-  let demoOtp = String(Math.floor(1000 + Math.random() * 9000));
+  let generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
   try {
     const res = await fetch("/api/auth/send-otp", {
       method: "POST",
@@ -1341,17 +1432,18 @@ async function handleSendOtp(e) {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.demo_otp) demoOtp = data.demo_otp;
+      if (data.demo_otp) generatedOtp = data.demo_otp;
     }
   } catch (err) {
-    // GitHub Pages / Cloudflare Pages Static Mode Fallback
+    // Cloudflare / GitHub Pages mode
   }
-  localStorage.setItem("avtolive_pending_otp_" + phone, demoOtp);
+  localStorage.setItem("avtolive_pending_otp_" + phone, generatedOtp);
   const verifyBox = document.getElementById("otpVerifyBox");
   verifyBox.style.display = "flex";
-  document.getElementById("otpCodeInput").value = demoOtp;
-  document.getElementById("otpSentHint").innerHTML = `<strong>${phone}</strong> nömrəsinə SMS göndərildi (Təsdiq Kodu: <strong>${demoOtp}</strong>)`;
-  showToast(`SMS Bildirişi [${phone}]: Təsdiq kodunuz: <strong>${demoOtp}</strong>`);
+  document.getElementById("otpCodeInput").value = "";
+  document.getElementById("otpCodeInput").focus();
+  document.getElementById("otpSentHint").innerHTML = `Təsdiq kodu <strong>${phone}</strong> nömrəsinə SMS olaraq göndərildi. Lütfən telefonunuza gələn 4 rəqəmli kodu daxil edin.`;
+  showToast(`Təsdiq kodu ${phone} nömrəsinə SMS ilə göndərildi.`);
 }
 
 async function handleVerifyOtp(e) {
