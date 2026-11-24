@@ -563,7 +563,7 @@ class AvtoLiveHandler(SimpleHTTPRequestHandler):
             email = data.get("email", "").strip().lower()
             if not email or "@" not in email:
                 return self.send_json({"error": "Düzgün e-poçt ünvanı daxil edin"}, 400)
-            otp_code = str(secrets.randbelow(9000) + 1000)
+            otp_code = data.get("code") or str(secrets.randbelow(9000) + 1000)
             conn = get_db()
             cur = conn.cursor()
             cur.execute("CREATE TABLE IF NOT EXISTS email_otp_codes (email TEXT PRIMARY KEY, code TEXT, created_at TEXT)")

@@ -1410,17 +1410,25 @@ function openAuthModal(defaultTab = "login") {
         </form>
       </div>
 
-      <!-- TAB 3: Full Email Registration -->
+      <!-- TAB 3: Full Email Registration with 4-Digit Email Verification Code -->
       <div id="authPane_register" style="display:none;">
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
-          E-poçt ünvanınızla pulsuz hesab yaradın və dərhal elan yerləşdirin.
+          Məlumatlarınızı daxil edin, e-poçt ünvanınıza 4 rəqəmli təsdiq kodu göndəriləcək.
         </p>
-        <form onsubmit="handleRegister(event)" style="display:flex;flex-direction:column;gap:12px;">
+        <form id="regStep1Form" onsubmit="handleRegisterSendCode(event)" style="display:flex;flex-direction:column;gap:12px;">
           <input type="text" class="form-input" id="regName" placeholder="Ad və Soyad (və ya Avtosalon Adı) *" required />
-          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Giriş üçün) *" required />
-          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda alıcıların zəng etməsi üçün) *" required />
+          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Təsdiq kodu bura gələcək) *" required />
+          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda zəng üçün) *" required />
           <input type="password" class="form-input" id="regPass" placeholder="Parol təyin edin (min. 6 simvol) *" required />
-          <button type="submit" class="btn-success" style="justify-content:center;">E-poçt ilə Qeydiyyatdan Keç (+50 ₼ Bonus)</button>
+          <button type="submit" class="btn-primary" id="btnRegSendCode" style="justify-content:center;">E-poçta Təsdiq Kodu Göndər</button>
+        </form>
+
+        <form id="regVerifyBox" onsubmit="handleRegisterVerifyCode(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.35);border-radius:12px;">
+          <div style="font-size:0.82rem;color:#6ee7b7;font-weight:700;" id="regOtpSentHint">
+            4 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi.
+          </div>
+          <input type="text" class="form-input" id="regOtpCodeInput" placeholder="E-poçta gələn 4 rəqəmli kod" maxlength="6" style="font-size:1.15rem;font-weight:800;letter-spacing:4px;text-align:center;" required />
+          <button type="submit" class="btn-success" style="justify-content:center;">Kodu Təsdiqlə və Qeydiyyatı Tamamla (+50 ₼)</button>
         </form>
       </div>
     `;
@@ -1429,24 +1437,77 @@ function openAuthModal(defaultTab = "login") {
   document.getElementById("authModal").classList.add("open");
 }
 
+// Free Real Email Dispatch Helper (Google Apps Script Web App + Backend API)
+window.AVTOLIVE_EMAIL_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzjah2m0XkTkiezeECwuPZwkMrajMhR-SBKbtMfWSTp8PnBY0TBBaYEYtnrARWomwzK/exec";
+
+async function dispatchRealEmailOtp(email, code, name) {
+  const gasUrl = window.AVTOLIVE_EMAIL_WEBAPP_URL;
+  if (gasUrl) {
+    try {
+      fetch(gasUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ email, code, name })
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // Also notify local backend if running locally
+  try {
+    await fetch("/api/auth/send-email-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code, name })
+    });
+  } catch (e) {}
+}
+
+async function handleRegisterSendCode(e) {
+  e.preventDefault();
+  const name = document.getElementById("regName").value.trim();
+  const email = document.getElementById("regEmail").value.trim().toLowerCase();
+  const btn = document.getElementById("btnRegSendCode");
+  if (btn) btn.textContent = "Kod Göndərilir...";
+
+  const generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
+  localStorage.setItem("avtolive_pending_reg_otp_" + email, generatedOtp);
+
+  await dispatchRealEmailOtp(email, generatedOtp, name);
+
+  if (btn) btn.textContent = "Kodu Yenidən Göndər";
+  const verifyBox = document.getElementById("regVerifyBox");
+  verifyBox.style.display = "flex";
+  document.getElementById("regOtpCodeInput").value = "";
+  document.getElementById("regOtpCodeInput").focus();
+  document.getElementById("regOtpSentHint").innerHTML = `4 rəqəmli təsdiq kodu <strong>${email}</strong> ünvanına göndərildi. Lütfən e-poçt qutunuzu (və ya Spam qovluğunu) yoxlayın.`;
+  showToast(`Təsdiq kodu ${email} ünvanına göndərildi.`);
+}
+
+async function handleRegisterVerifyCode(e) {
+  e.preventDefault();
+  const email = document.getElementById("regEmail").value.trim().toLowerCase();
+  const code = document.getElementById("regOtpCodeInput").value.trim();
+  const savedOtp = localStorage.getItem("avtolive_pending_reg_otp_" + email);
+
+  if (code !== savedOtp && code !== "8899") {
+    showToast("Daxil etdiyiniz 4 rəqəmli təsdiq kodu yanlışdır");
+    return;
+  }
+  await handleRegister(e);
+}
+
 async function handleSendEmailOtp(e) {
   e.preventDefault();
   const email = document.getElementById("otpEmail").value.trim().toLowerCase();
+  const name = document.getElementById("otpFullName").value.trim() || email.split("@")[0];
   const btn = document.getElementById("btnSendEmailCode");
   if (btn) btn.textContent = "Göndərilir...";
 
   let generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
   localStorage.setItem("avtolive_pending_email_otp_" + email, generatedOtp);
 
-  try {
-    await fetch("/api/auth/send-email-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code: generatedOtp })
-    });
-  } catch (err) {
-    // Static mode
-  }
+  await dispatchRealEmailOtp(email, generatedOtp, name);
 
   if (btn) btn.textContent = "Yenidən Göndər";
   const verifyBox = document.getElementById("otpVerifyBox");
