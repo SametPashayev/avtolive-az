@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: avtolive-az
+    runtime: python
+    buildCommand: ""
+    startCommand: python server.py
+    envVars:
+      - key: PORT
+        value: 8080
