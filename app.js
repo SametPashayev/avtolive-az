@@ -477,8 +477,16 @@ async function initApp() {
     const res = await fetch("/api/init", { headers });
     if (!res.ok) throw new Error("Static fallback");
     const data = await res.json();
-    state.listings = data.listings || [];
-    state.salons = data.salons || [];
+    const seed = window.AVTOLIVE_SEED || { listings: [], salons: [], messages: [] };
+    if (Array.isArray(data.db_listings)) {
+      // Cloudflare D1 SQL Database mode: combine live D1 listings with initial seed catalog
+      const dbIds = new Set(data.db_listings.map(x => x.id));
+      state.listings = [...data.db_listings, ...(seed.listings || []).filter(x => !dbIds.has(x.id))];
+      state.salons = data.salons || seed.salons || [];
+    } else {
+      state.listings = data.listings || seed.listings || [];
+      state.salons = data.salons || seed.salons || [];
+    }
     state.user = data.user || JSON.parse(localStorage.getItem("avtolive_user") || "null");
   } catch (e) {
     const seed = window.AVTOLIVE_SEED || { listings: [], salons: [], messages: [] };
