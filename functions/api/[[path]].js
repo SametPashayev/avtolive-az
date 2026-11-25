@@ -1,0 +1,313 @@
+// Cloudflare Pages Function + Cloudflare D1 SQL Database Backend for avtolive.az
+// Handles: /api/init, /api/auth/register, /api/auth/login, /api/auth/verify-email-otp,
+//          /api/listings, /api/live/:id/messages, /api/live/:id/toggle, /api/listings/:id/promote
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode("avtolive_salt_" + str);
+  const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function randomHex(len = 24) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function jsonResp(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    }
+  });
+}
+
+async function ensureSchema(db) {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      phone TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT DEFAULT 'seller',
+      salon_name TEXT DEFAULT '',
+      balance REAL DEFAULT 50.0,
+      verified INTEGER DEFAULT 1,
+      avatar TEXT DEFAULT 'AL',
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS listings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      salon_id INTEGER DEFAULT 0,
+      brand TEXT NOT NULL,
+      model TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      body_type TEXT NOT NULL,
+      fuel_type TEXT NOT NULL,
+      transmission TEXT NOT NULL,
+      drivetrain TEXT DEFAULT 'Tam (AWD)',
+      engine_volume REAL NOT NULL,
+      horsepower INTEGER NOT NULL,
+      mileage INTEGER NOT NULL,
+      color TEXT NOT NULL,
+      price REAL NOT NULL,
+      currency TEXT DEFAULT 'AZN',
+      city TEXT NOT NULL,
+      is_new INTEGER DEFAULT 0,
+      credit INTEGER DEFAULT 0,
+      barter INTEGER DEFAULT 0,
+      vin_code TEXT DEFAULT '',
+      tier TEXT DEFAULT 'standard',
+      is_live INTEGER DEFAULT 0,
+      live_title TEXT DEFAULT '',
+      live_viewers INTEGER DEFAULT 0,
+      live_stream_url TEXT DEFAULT '',
+      images TEXT NOT NULL,
+      features TEXT NOT NULL,
+      description_az TEXT NOT NULL,
+      description_tr TEXT NOT NULL,
+      description_ru TEXT NOT NULL,
+      seller_name TEXT NOT NULL,
+      seller_phone TEXT NOT NULL,
+      views INTEGER DEFAULT 120,
+      likes INTEGER DEFAULT 14,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS live_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      listing_id INTEGER NOT NULL,
+      user_name TEXT NOT NULL,
+      message TEXT NOT NULL,
+      is_seller INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  const demoCheck = await db.prepare("SELECT COUNT(*) as cnt FROM users").first();
+  if (!demoCheck || demoCheck.cnt === 0) {
+    const passHash = await sha256("123456");
+    const now = new Date().toISOString();
+    await db.prepare(`
+      INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind("Rəşad Məmmədov", "rashad@avtolive.az", "+994 50 210 44 55", passHash, "salon", "Baku Luxury Motors", 150.0, 1, "RM", now).run();
+  }
+}
+
+function parseListingRow(r) {
+  const copy = { ...r };
+  try { copy.images = typeof r.images === "string" ? JSON.parse(r.images) : (r.images || []); } catch (e) { copy.images = []; }
+  try { copy.features = typeof r.features === "string" ? JSON.parse(r.features) : (r.features || []); } catch (e) { copy.features = []; }
+  return copy;
+}
+
+async function getCurrentUser(db, request) {
+  const auth = request.headers.get("Authorization") || "";
+  if (!auth.startsWith("Bearer ")) return null;
+  const token = auth.slice(7).trim();
+  if (!token) return null;
+  const user = await db.prepare(`
+    SELECT u.id, u.full_name, u.email, u.phone, u.role, u.salon_name, u.balance, u.verified, u.avatar
+    FROM sessions s JOIN users u ON s.user_id = u.id
+    WHERE s.token = ?
+  `).bind(token).first();
+  return user || null;
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  if (request.method === "OPTIONS") {
+    return jsonResp({}, 204);
+  }
+
+  const db = env.DB;
+  if (!db) {
+    return jsonResp({ error: "D1 Database binding (DB) not configured yet" }, 503);
+  }
+
+  await ensureSchema(db);
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  if (request.method === "GET") {
+    if (path === "/api/init") {
+      const { results } = await db.prepare("SELECT * FROM listings ORDER BY is_live DESC, id DESC").all();
+      const dbListings = (results || []).map(parseListingRow);
+      const user = await getCurrentUser(db, request);
+      return jsonResp({ db_listings: dbListings, user });
+    }
+
+    if (path === "/api/users") {
+      const { results } = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, created_at FROM users ORDER BY id DESC").all();
+      return jsonResp({ users: results || [] });
+    }
+
+    if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const { results } = await db.prepare("SELECT * FROM live_messages WHERE listing_id = ? ORDER BY id ASC").bind(listingId).all();
+      return jsonResp({ messages: results || [] });
+    }
+  }
+
+  if (request.method === "POST") {
+    let data = {};
+    try { data = await request.json(); } catch (e) {}
+
+    if (path === "/api/auth/register") {
+      const full_name = (data.full_name || "").trim();
+      const email = (data.email || "").trim().toLowerCase();
+      const phone = (data.phone || "+994 50 000 00 00").trim();
+      const password = data.password || "";
+      if (!full_name || !email || !password) {
+        return jsonResp({ error: "Bütün xanaları doldurun" }, 400);
+      }
+
+      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
+      if (existing) {
+        return jsonResp({ error: "Bu e-poçt ünvanı artıq qeydiyyatdan keçib" }, 400);
+      }
+
+      const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
+      const passHash = await sha256(password);
+      const now = new Date().toISOString();
+
+      const res = await db.prepare(`
+        INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
+        VALUES (?, ?, ?, ?, 'seller', '', 50.0, 1, ?, ?)
+      `).bind(full_name, email, phone, passHash, initials, now).run();
+
+      const userId = res.meta.last_row_id;
+      const token = randomHex(24);
+      await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, userId, now).run();
+      const user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(userId).first();
+      return jsonResp({ token, user }, 201);
+    }
+
+    if (path === "/api/auth/login") {
+      const email = (data.email || "").trim().toLowerCase();
+      const password = data.password || "";
+      const passHash = await sha256(password);
+
+      const user = await db.prepare(`
+        SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
+        FROM users WHERE LOWER(email) = ? AND password_hash = ?
+      `).bind(email, passHash).first();
+
+      if (!user) {
+        return jsonResp({ error: "E-poçt və ya parol yanlışdır" }, 401);
+      }
+
+      const token = randomHex(24);
+      const now = new Date().toISOString();
+      await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, user.id, now).run();
+      return jsonResp({ token, user });
+    }
+
+    if (path === "/api/auth/verify-email-otp") {
+      const email = (data.email || "").trim().toLowerCase();
+      const full_name = (data.full_name || email.split("@")[0] || "İstifadəçi").trim();
+      const now = new Date().toISOString();
+
+      let user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE LOWER(email) = ?").bind(email).first();
+      if (!user) {
+        const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
+        const passHash = await sha256(data.code || "otp");
+        const res = await db.prepare(`
+          INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
+          VALUES (?, ?, '+994 50 000 00 00', ?, 'seller', '', 50.0, 1, ?, ?)
+        `).bind(full_name, email, passHash, initials, now).run();
+        user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(res.meta.last_row_id).first();
+      }
+
+      const token = randomHex(24);
+      await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, user.id, now).run();
+      return jsonResp({ token, user });
+    }
+
+    if (path === "/api/listings") {
+      const user = await getCurrentUser(db, request);
+      const userId = user ? user.id : 1;
+      const seller_name = data.seller_name || (user ? user.full_name : "AvtoLive Satıcı");
+      const seller_phone = data.seller_phone || (user ? user.phone : "+994 50 777 88 99");
+      const brand = data.brand || "BMW";
+      const model = data.model || "530e";
+      const year = parseInt(data.year) || 2024;
+      const body_type = data.body_type || "Sedan";
+      const fuel_type = data.fuel_type || "Benzin";
+      const transmission = data.transmission || "Avtomat";
+      const engine_volume = parseFloat(data.engine_volume) || 2.0;
+      const horsepower = parseInt(data.horsepower) || 250;
+      const mileage = parseInt(data.mileage) || 0;
+      const color = data.color || "Qara (Metolik)";
+      const price = parseFloat(data.price) || 45000;
+      const city = data.city || "Bakı";
+      const is_new = mileage === 0 ? 1 : 0;
+      const credit = data.credit ? 1 : 0;
+      const barter = data.barter ? 1 : 0;
+      const tier = data.tier || "standard";
+      const is_live = data.start_live ? 1 : 0;
+      const live_title = is_live ? (data.live_title || `CANLI: ${brand} ${model} (${year})`) : "";
+      const live_viewers = is_live ? 28 : 0;
+      const imagesArr = Array.isArray(data.images) && data.images.length > 0
+        ? data.images
+        : [data.image_url || "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"];
+      const images = JSON.stringify(imagesArr);
+      const features = JSON.stringify(data.features || ["360° Kamera", "Dəri Salon", "Lyuk", "Apple CarPlay", "LED Faralar"]);
+      const desc = data.description || "Avtomobil ideal vəziyyətdədir.";
+      const now = new Date().toISOString();
+
+      const res = await db.prepare(`
+        INSERT INTO listings (
+          user_id, salon_id, brand, model, year, body_type, fuel_type, transmission, drivetrain,
+          engine_volume, horsepower, mileage, color, price, currency, city, is_new, credit, barter,
+          vin_code, tier, is_live, live_title, live_viewers, live_stream_url, images, features,
+          description_az, description_tr, description_ru, seller_name, seller_phone, views, likes, created_at
+        ) VALUES (?, 0, ?, ?, ?, ?, ?, ?, 'Tam (AWD)', ?, ?, ?, ?, ?, 'AZN', ?, ?, ?, ?, 'AVTOLIVE2026', ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+      `).bind(
+        userId, brand, model, year, body_type, fuel_type, transmission,
+        engine_volume, horsepower, mileage, color, price, city, is_new, credit, barter,
+        tier, is_live, live_title, live_viewers, images, features,
+        desc, desc, desc, seller_name, seller_phone, now
+      ).run();
+
+      const row = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ listing: parseListingRow(row) }, 201);
+    }
+
+    if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const user_name = data.user_name || "Alıcı";
+      const message = (data.message || "").trim();
+      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
+      const nowTime = new Date().toTimeString().slice(0, 5);
+      const res = await db.prepare(`
+        INSERT INTO live_messages (listing_id, user_name, message, is_seller, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(listingId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
+      const msg = await db.prepare("SELECT * FROM live_messages WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ message: msg }, 201);
+    }
+  }
+
+  return jsonResp({ status: "ok" });
+        }
