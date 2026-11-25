@@ -465,21 +465,49 @@ function onPostBrandChange() {
   pModel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join("");
 }
 
+// Cloudflare D1 Global Endpoint (ensures GitHub Pages, Cloudflare Pages, and Localhost all write to the same Cloudflare D1 SQL Database)
+const D1_API_BASE = "https://avtolive-az.pages.dev";
+
+async function syncLocalUsersToCloudD1() {
+  try {
+    const localUsers = JSON.parse(localStorage.getItem("avtolive_registered_users") || "[]");
+    const activeUser = JSON.parse(localStorage.getItem("avtolive_user") || "null");
+    const toSync = [...localUsers];
+    if (activeUser && activeUser.email && activeUser.email !== "rashad@avtolive.az") {
+      toSync.push(activeUser);
+    }
+    for (const u of toSync) {
+      if (u && u.email && u.email !== "rashad@avtolive.az") {
+        await fetch(D1_API_BASE + "/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            full_name: u.full_name || u.email.split("@")[0],
+            email: u.email,
+            phone: u.phone || "+994 50 000 00 00",
+            password: u.password || "avtolive2026"
+          })
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {}
+}
+
 // Initialize App
 async function initApp() {
   buildCustomDropdowns();
   setLanguage(state.lang, false);
   setCurrency(state.currency, false);
   updateFavBadge();
+  syncLocalUsersToCloudD1();
 
   try {
     const headers = state.token ? { "Authorization": "Bearer " + state.token } : {};
-    const res = await fetch("/api/init", { headers });
+    const res = await fetch(D1_API_BASE + "/api/init", { headers });
     if (!res.ok) throw new Error("Static fallback");
     const data = await res.json();
     const seed = window.AVTOLIVE_SEED || { listings: [], salons: [], messages: [] };
     if (Array.isArray(data.db_listings)) {
-      // Cloudflare D1 SQL Database mode: combine live D1 listings with initial seed catalog
       const dbIds = new Set(data.db_listings.map(x => x.id));
       state.listings = [...data.db_listings, ...(seed.listings || []).filter(x => !dbIds.has(x.id))];
       state.salons = data.salons || seed.salons || [];
@@ -1355,7 +1383,7 @@ async function submitNewListing(e) {
   };
 
   try {
-    const res = await fetch("/api/listings", {
+    const res = await fetch(D1_API_BASE + "/api/listings", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1494,16 +1522,6 @@ function openAuthModal(defaultTab = "login") {
   } else {
     const initialMode = (defaultTab === "register" || defaultTab === "email_otp") ? defaultTab : "login";
     body.innerHTML = `
-      <div style="margin-bottom:16px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:0.8rem;">
-          <strong>Test Üçün Sürətli Giriş:</strong><br/>
-          Baku Luxury Motors (rashad@avtolive.az)
-        </div>
-        <button class="btn-success" style="padding:7px 12px;font-size:0.78rem;" onclick="quickDemoLogin()">
-          1 Kliklə Daxil Ol
-        </button>
-      </div>
-
       <div class="condition-tabs" style="width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:18px;">
         <button type="button" class="cond-tab" id="authTab_login" onclick="switchAuthTab('login')">E-poçtla Giriş</button>
         <button type="button" class="cond-tab" id="authTab_email_otp" onclick="switchAuthTab('email_otp')">E-poçta Kod</button>
@@ -1601,11 +1619,22 @@ async function handleRegisterSendCode(e) {
   e.preventDefault();
   const name = document.getElementById("regName").value.trim();
   const email = document.getElementById("regEmail").value.trim().toLowerCase();
+  const phone = document.getElementById("regPhone").value.trim();
+  const password = document.getElementById("regPass").value;
   const btn = document.getElementById("btnRegSendCode");
   if (btn) btn.textContent = "Kod Göndərilir...";
 
   const generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
   localStorage.setItem("avtolive_pending_reg_otp_" + email, generatedOtp);
+
+  // Immediately save user record into Cloudflare D1 database so it appears in D1 users table right away
+  try {
+    await fetch(D1_API_BASE + "/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name: name, email, phone, password, verified: 0 })
+    });
+  } catch (err) {}
 
   await dispatchRealEmailOtp(email, generatedOtp, name);
 
@@ -1659,7 +1688,7 @@ async function handleVerifyEmailOtp(e) {
   const full_name = document.getElementById("otpFullName").value.trim() || email.split("@")[0];
 
   try {
-    const res = await fetch("/api/auth/verify-email-otp", {
+    const res = await fetch(D1_API_BASE + "/api/auth/verify-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code, full_name })
@@ -1703,10 +1732,6 @@ async function handleVerifyEmailOtp(e) {
   }
 }
 
-async function quickDemoLogin() {
-  await loginWithCredentials("rashad@avtolive.az", "123456");
-}
-
 async function handleLogin(e) {
   e.preventDefault();
   await loginWithCredentials(
@@ -1717,7 +1742,7 @@ async function handleLogin(e) {
 
 async function loginWithCredentials(email, password) {
   try {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch(D1_API_BASE + "/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
@@ -1735,30 +1760,18 @@ async function loginWithCredentials(email, password) {
         return;
       }
     }
-  } catch (err) {
-    // Fallback for static GitHub/Cloudflare Pages hosting
-  }
+  } catch (err) {}
 
   const localUsers = JSON.parse(localStorage.getItem("avtolive_registered_users") || "[]");
   const found = localUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-  if (found || email.toLowerCase() === "rashad@avtolive.az") {
-    const userObj = found || {
-      id: 1,
-      full_name: "Rəşad Məmmədov",
-      email: "rashad@avtolive.az",
-      phone: "+994 50 210 44 55",
-      role: "salon",
-      salon_name: "Baku Luxury Motors",
-      balance: 150,
-      avatar: "RM"
-    };
+  if (found) {
     state.token = "local_tok_" + Date.now();
-    state.user = userObj;
+    state.user = found;
     localStorage.setItem("avtolive_token", state.token);
-    localStorage.setItem("avtolive_user", JSON.stringify(userObj));
+    localStorage.setItem("avtolive_user", JSON.stringify(found));
     updateAuthUI();
     closeModal("authModal");
-    showToast(`Xoş gəldiniz, ${userObj.full_name}`);
+    showToast(`Xoş gəldiniz, ${found.full_name}`);
   } else {
     showToast("E-poçt və ya parol yanlışdır");
   }
@@ -1770,10 +1783,11 @@ async function handleRegister(e) {
     full_name: document.getElementById("regName").value.trim(),
     email: document.getElementById("regEmail").value.trim(),
     phone: document.getElementById("regPhone").value.trim(),
-    password: document.getElementById("regPass").value
+    password: document.getElementById("regPass").value,
+    verified: 1
   };
   try {
-    const res = await fetch("/api/auth/register", {
+    const res = await fetch(D1_API_BASE + "/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -1791,9 +1805,7 @@ async function handleRegister(e) {
         return;
       }
     }
-  } catch (err) {
-    // Fallback for static GitHub/Cloudflare Pages hosting
-  }
+  } catch (err) {}
 
   const initials = payload.full_name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "AL";
   const newUser = {
