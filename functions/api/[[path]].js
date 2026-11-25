@@ -130,7 +130,15 @@ async function getCurrentUser(db, request) {
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") {
-    return jsonResp({}, 204);
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Max-Age": "86400"
+      }
+    });
   }
 
   const db = env.DB;
@@ -315,4 +323,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-}
+        }
