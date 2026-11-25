@@ -174,6 +174,12 @@ export async function onRequest(context) {
     let data = {};
     try { data = await request.json(); } catch (e) {}
 
+    if (path === "/api/auth/check-email") {
+      const email = (data.email || "").trim().toLowerCase();
+      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
+      return jsonResp({ exists: Boolean(existing) });
+    }
+
     if (path === "/api/auth/register") {
       const full_name = (data.full_name || "").trim();
       const email = (data.email || "").trim().toLowerCase();
@@ -186,22 +192,29 @@ export async function onRequest(context) {
       const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
       const passHash = await sha256(password);
       const now = new Date().toISOString();
-      const verifiedFlag = data.verified === 0 ? 0 : 1;
 
-      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
-      let userId;
+      const existing = await db.prepare("SELECT id, verified FROM users WHERE LOWER(email) = ?").bind(email).first();
       if (existing) {
-        userId = existing.id;
-        await db.prepare(`
-          UPDATE users SET full_name = ?, phone = ?, password_hash = ?, verified = ?, avatar = ? WHERE id = ?
-        `).bind(full_name, phone, passHash, verifiedFlag, initials, userId).run();
-      } else {
-        const res = await db.prepare(`
-          INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
-          VALUES (?, ?, ?, ?, 'seller', '', 50.0, ?, ?, ?)
-        `).bind(full_name, email, phone, passHash, verifiedFlag, initials, now).run();
-        userId = res.meta.last_row_id;
+        // Only allow finishing step 2 verification if step === 'verify_code' AND existing.verified === 0
+        if (data.step === "verify_code" && existing.verified === 0) {
+          await db.prepare("UPDATE users SET verified = 1 WHERE id = ?").bind(existing.id).run();
+          const token = randomHex(24);
+          await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, existing.id, now).run();
+          const user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(existing.id).first();
+          return jsonResp({ token, user }, 200);
+        }
+        return jsonResp({
+          error: "Bu e-poçt ünvanı artıq qeydiyyatdan keçib! Bir e-poçt ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.",
+          already_exists: true
+        }, 409);
       }
+
+      const verifiedFlag = data.verified === 0 ? 0 : 1;
+      const res = await db.prepare(`
+        INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
+        VALUES (?, ?, ?, ?, 'seller', '', 50.0, ?, ?, ?)
+      `).bind(full_name, email, phone, passHash, verifiedFlag, initials, now).run();
+      const userId = res.meta.last_row_id;
 
       const token = randomHex(24);
       await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, userId, now).run();
