@@ -703,10 +703,14 @@ class AvtoLiveHandler(SimpleHTTPRequestHandler):
             live_viewers = 42 if is_live else 0
             live_stream_url = "https://assets.mixkit.co/videos/preview/mixkit-sports-car-driving-in-the-city-at-night-41569-large.mp4" if is_live else ""
 
-            img_url = data.get("image_url", "").strip()
-            if not img_url:
-                img_url = "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"
-            images = json.dumps([img_url])
+            raw_images = data.get("images")
+            if isinstance(raw_images, list) and len(raw_images) > 0:
+                images = json.dumps(raw_images)
+            else:
+                img_url = data.get("image_url", "").strip()
+                if not img_url:
+                    img_url = "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"
+                images = json.dumps([img_url])
             features = json.dumps(data.get("features", ["360° Kamera", "Dəri Salon", "Lyuk", "Apple CarPlay", "LED Faralar"]))
             desc = data.get("description", "Avtomobil ideal vəziyyətdədir, heç bir xərc tələb etmir. AvtoLive.az vasitəsilə canlı yayımda baxış keçirə bilərsiniz.")
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")

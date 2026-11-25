@@ -395,7 +395,7 @@
         </div>
 
         <!-- 10. Keyword / VIN Search -->
-        <div class="filter-field-box" style="grid-column: span 2;">
+        <div class="filter-field-box filter-span-2">
           <div class="filter-field-label" data-i18n="lbl_search">Açar söz və ya VIN kod</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <svg class="svg-icon sm" style="color:#64748b;"><use href="#i-search"/></svg>
@@ -595,8 +595,8 @@
         </div>
         <button class="close-btn" onclick="closeModal('postAdModal')">✕</button>
       </div>
-      <form id="postAdForm" onsubmit="submitNewListing(event)" style="padding:24px;">
-        <div class="filter-grid" style="grid-template-columns:repeat(3, 1fr);gap:14px;">
+      <form id="postAdForm" onsubmit="submitNewListing(event)" class="post-ad-form">
+        <div class="post-form-grid">
           <div class="form-control">
             <label data-i18n="lbl_brand">Marka *</label>
             <select class="form-select" id="pBrand" onchange="onPostBrandChange()" required></select>
@@ -696,9 +696,17 @@
           </div>
         </div>
 
-        <div class="form-control" style="margin-top:14px;">
-          <label>Avtomobil Şəkilləri (URL)</label>
-          <input type="url" class="form-input" id="pImage" placeholder="Əsas Şəkil URL (boş qalsa avtomatik HD avtomobil şəkli əlavə olunur)" />
+        <div class="form-control" style="margin-top:16px;">
+          <label>Avtomobil Şəkilləri (Cihazdan və ya Telefondan Seç — Çoxlu Şəkil Yüklə)</label>
+          <div class="photo-upload-zone" id="photoUploadZone" onclick="document.getElementById('pFileInput').click()">
+            <input type="file" id="pFileInput" accept="image/*" multiple style="display:none;" onchange="handleDevicePhotosSelected(event)" />
+            <div class="photo-upload-icon">
+              <svg class="svg-icon lg"><use href="#i-plus"/></svg>
+            </div>
+            <div class="photo-upload-title">Kompüter və ya Telefondan Şəkil Seçin</div>
+            <div class="photo-upload-sub">JPG, PNG, WEBP, HEIC dəstəklənir (1-dən 12-yə qədər şəkil seçə bilərsiniz)</div>
+          </div>
+          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
         </div>
 
         <div class="form-control" style="margin-top:14px;">

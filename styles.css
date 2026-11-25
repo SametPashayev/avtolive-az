@@ -1299,11 +1299,318 @@ body {
   padding: 36px 28px;
 }
 
+/* Grid Helpers & Direct Device Photo Uploader */
+.filter-span-2 {
+  grid-column: span 2;
+}
+.post-ad-form {
+  padding: 24px;
+}
+.post-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.detail-specs-grid {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px;
+}
+
+.photo-upload-zone {
+  background: #080d19;
+  border: 2px dashed rgba(225, 29, 72, 0.45);
+  border-radius: 14px;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.photo-upload-zone:hover {
+  background: rgba(225, 29, 72, 0.08);
+  border-color: var(--primary-bright);
+}
+.photo-upload-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(225, 29, 72, 0.16);
+  color: var(--primary-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.photo-upload-title {
+  font-weight: 800;
+  font-size: 0.94rem;
+  color: #fff;
+}
+.photo-upload-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+.photo-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.photo-thumb-item {
+  position: relative;
+  height: 74px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #060911;
+}
+.photo-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-thumb-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(6, 9, 17, 0.85);
+  color: #ff2a4b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-thumb-main-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVE DESIGN (Zero Overflow)
+   ============================================================ */
 @media (max-width: 1150px) {
   .hero-section { grid-template-columns: 1fr; }
   .filter-grid { grid-template-columns: repeat(2, 1fr); }
   .live-studio-grid { grid-template-columns: 1fr; }
+  .post-form-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-specs-grid { grid-template-columns: 1fr; }
 }
-@media (max-width: 680px) {
-  .filter-grid { grid-template-columns: 1fr; }
+
+@media (max-width: 768px) {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  .top-promo-bar {
+    padding: 8px 12px;
+    font-size: 0.73rem;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .promo-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+  #promoText {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 68%;
+  }
+  .promo-right {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .top-meta-item:first-child {
+    display: none;
+  }
+
+  .navbar {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .brand-logo img {
+    height: 36px;
+  }
+  .nav-actions {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    order: 2;
+  }
+  .nav-links {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    justify-content: flex-start;
+    padding: 4px;
+    order: 3;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-btn {
+    padding: 7px 11px;
+    font-size: 0.79rem;
+    flex-shrink: 0;
+  }
+  .btn-primary, .btn-secondary, .btn-success {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .container {
+    padding: 14px 12px;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .hero-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+  .hero-badge {
+    font-size: 0.68rem;
+    padding: 5px 10px;
+  }
+  .hero-title {
+    font-size: 1.48rem;
+    line-height: 1.24;
+    word-break: break-word;
+  }
+  .hero-subtitle {
+    font-size: 0.86rem;
+    max-width: 100%;
+  }
+  .hero-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .stat-box h4 {
+    font-size: 1.15rem;
+  }
+  .stat-box p {
+    font-size: 0.7rem;
+  }
+  .hero-live-stage {
+    min-height: 260px;
+    border-radius: 16px;
+  }
+  .hero-live-overlay {
+    padding: 16px;
+  }
+
+  .filter-panel {
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+  .filter-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .filter-title-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .condition-tabs {
+    margin-left: 0 !important;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .cond-tab {
+    padding: 7px 8px;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+  .filter-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .filter-span-2 {
+    grid-column: span 1 !important;
+  }
+  .filter-bottom-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .quick-toggles {
+    width: 100%;
+  }
+  .chip-toggle {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 0.76rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 22px 0 14px;
+  }
+  .section-title {
+    font-size: 1.08rem;
+    flex-wrap: wrap;
+  }
+
+  .live-strip, .cars-grid, .salons-grid, .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .modal-backdrop {
+    padding: 8px;
+  }
+  .modal-window {
+    border-radius: 16px;
+    max-height: 95vh;
+  }
+  .modal-header {
+    padding: 12px 14px;
+  }
+  .modal-header h3 {
+    font-size: 0.96rem !important;
+  }
+  .post-ad-form {
+    padding: 14px;
+  }
+  .post-form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .detail-specs-grid {
+    padding: 14px;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .live-video-pane {
+    min-height: 260px;
+  }
+  .live-controls-bar {
+    position: static;
+    margin: 10px;
+  }
 }

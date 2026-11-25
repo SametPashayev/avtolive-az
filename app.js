@@ -980,7 +980,7 @@ async function openCarDetail(id) {
       </div>
     </div>
 
-    <div style="padding:24px;display:grid;grid-template-columns:1.4fr 1fr;gap:24px;">
+    <div class="detail-specs-grid">
       <div>
         <h4 style="font-size:1.05rem;font-weight:800;margin-bottom:12px;">Avtomobil Haqqında Ətraflı Məlumat</h4>
         <p style="color:#cbd5e1;font-size:0.92rem;line-height:1.65;margin-bottom:18px;">
@@ -1239,10 +1239,76 @@ async function promoteCarToVip(listingId) {
   }
 }
 
+// Direct Device & Phone Multi-Photo Upload Engine
+state.uploadedPhotos = [];
+
+function compressImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 1100;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleDevicePhotosSelected(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  for (const file of files.slice(0, 12)) {
+    const dataUrl = await compressImageFile(file);
+    state.uploadedPhotos.push(dataUrl);
+  }
+  event.target.value = "";
+  renderUploadedPhotoPreviews();
+}
+
+function removeUploadedPhoto(idx, e) {
+  if (e) e.stopPropagation();
+  state.uploadedPhotos.splice(idx, 1);
+  renderUploadedPhotoPreviews();
+}
+
+function renderUploadedPhotoPreviews() {
+  const grid = document.getElementById("photoPreviewGrid");
+  if (!grid) return;
+  grid.innerHTML = state.uploadedPhotos.map((src, i) => `
+    <div class="photo-thumb-item">
+      <img src="${src}" alt="Şəkil ${i + 1}" />
+      ${i === 0 ? `<span class="photo-thumb-main-badge">ƏSAS</span>` : ''}
+      <button type="button" class="photo-thumb-remove" onclick="removeUploadedPhoto(${i}, event)">✕</button>
+    </div>
+  `).join("");
+}
+
 function openPostModal(startLive = false, tier = "standard") {
   document.getElementById("pStartLive").checked = startLive;
   document.getElementById("liveTitleRow").style.display = startLive ? "flex" : "none";
   document.getElementById("pTier").value = tier;
+  state.uploadedPhotos = [];
+  renderUploadedPhotoPreviews();
   if (state.user) {
     document.getElementById("pSellerName").value = state.user.full_name;
     document.getElementById("pSellerPhone").value = state.user.phone;
@@ -1252,6 +1318,9 @@ function openPostModal(startLive = false, tier = "standard") {
 
 async function submitNewListing(e) {
   e.preventDefault();
+  const defaultPhoto = "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80";
+  const finalImages = state.uploadedPhotos.length > 0 ? [...state.uploadedPhotos] : [defaultPhoto];
+
   const payload = {
     brand: document.getElementById("pBrand").value,
     model: document.getElementById("pModel").value,
@@ -1268,7 +1337,8 @@ async function submitNewListing(e) {
     seller_name: document.getElementById("pSellerName").value,
     seller_phone: document.getElementById("pSellerPhone").value,
     tier: document.getElementById("pTier").value,
-    image_url: document.getElementById("pImage").value,
+    image_url: finalImages[0],
+    images: finalImages,
     description: document.getElementById("pDesc").value,
     start_live: document.getElementById("pStartLive").checked,
     credit: document.getElementById("pCredit").checked,
@@ -1276,24 +1346,80 @@ async function submitNewListing(e) {
     live_title: document.getElementById("pLiveTitle").value
   };
 
-  const res = await fetch("/api/listings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(state.token ? { "Authorization": "Bearer " + state.token } : {})
-    },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  if (data.listing) {
-    state.listings.unshift(data.listing);
-    closeModal("postAdModal");
-    switchTab("all");
-    renderAll();
-    showToast("Yeni elanınız uğurla dərc olundu");
-    if (data.listing.is_live) {
-      setTimeout(() => openCarDetail(data.listing.id), 400);
+  try {
+    const res = await fetch("/api/listings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(state.token ? { "Authorization": "Bearer " + state.token } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.listing) {
+        state.listings.unshift(data.listing);
+        closeModal("postAdModal");
+        switchTab("all");
+        renderAll();
+        showToast("Yeni elanınız şəkillərlə birlikdə dərc olundu!");
+        if (data.listing.is_live) {
+          setTimeout(() => openCarDetail(data.listing.id), 400);
+        }
+        return;
+      }
     }
+  } catch (err) {
+    // Cloudflare Pages / GitHub Pages static mode fallback
+  }
+
+  const newCar = {
+    id: Date.now(),
+    user_id: state.user ? state.user.id : 5,
+    salon_id: 0,
+    brand: payload.brand,
+    model: payload.model,
+    year: payload.year,
+    body_type: payload.body_type,
+    fuel_type: payload.fuel_type,
+    transmission: payload.transmission,
+    drivetrain: "Arxa (RWD)",
+    engine_volume: payload.engine_volume,
+    horsepower: payload.horsepower,
+    mileage: payload.mileage,
+    color: payload.color,
+    price: payload.price,
+    currency: "AZN",
+    city: payload.city,
+    is_new: payload.mileage === 0 ? 1 : 0,
+    credit: payload.credit ? 1 : 0,
+    barter: payload.barter ? 1 : 0,
+    vin_code: "AVTOLIVE" + Math.floor(100000 + Math.random() * 900000),
+    tier: payload.tier,
+    is_live: payload.start_live ? 1 : 0,
+    live_title: payload.live_title || `CANLI: ${payload.brand} ${payload.model} (${payload.year})`,
+    live_viewers: payload.start_live ? 24 : 0,
+    live_stream_url: "",
+    images: finalImages,
+    features: ["360° Kamera", "Dəri Salon", "Lyuk", "Apple CarPlay", "LED Faralar"],
+    description_az: payload.description || "Avtomobil ideal vəziyyətdədir.",
+    description_tr: payload.description || "Araç kusursuz durumdadır.",
+    description_ru: payload.description || "Автомобиль в идеальном состоянии.",
+    seller_name: payload.seller_name,
+    seller_phone: payload.seller_phone,
+    views: 1,
+    likes: 1
+  };
+  state.listings.unshift(newCar);
+  try {
+    localStorage.setItem("avtolive_custom_listings", JSON.stringify(state.listings));
+  } catch (e) {}
+  closeModal("postAdModal");
+  switchTab("all");
+  renderAll();
+  showToast("Yeni elanınız şəkillərlə birlikdə dərc olundu!");
+  if (newCar.is_live) {
+    setTimeout(() => openCarDetail(newCar.id), 400);
   }
 }
 
