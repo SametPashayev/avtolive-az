@@ -103,8 +103,8 @@ async function ensureSchema(db) {
     )
   `).run();
 
-  // Clean up test user if still present
-  await db.prepare("DELETE FROM users WHERE email = 'rashad@avtolive.az'").run();
+  // Clean up test users if still present
+  await db.prepare("DELETE FROM users WHERE email IN ('rashad@avtolive.az', 'testcheck@gmail.com')").run();
 }
 
 function parseListingRow(r) {
@@ -221,9 +221,12 @@ export async function onRequest(context) {
       return jsonResp({ token, user });
     }
 
-    if (path === "/api/auth/verify-email-otp") {
+    if (path === "/api/auth/send-email-otp" || path === "/api/auth/verify-email-otp") {
       const email = (data.email || "").trim().toLowerCase();
-      const full_name = (data.full_name || email.split("@")[0] || "İstifadəçi").trim();
+      if (!email || !email.includes("@")) {
+        return jsonResp({ error: "Düzgün e-poçt daxil edin" }, 400);
+      }
+      const full_name = (data.name || data.full_name || email.split("@")[0] || "İstifadəçi").trim();
       const now = new Date().toISOString();
 
       let user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE LOWER(email) = ?").bind(email).first();
@@ -235,6 +238,10 @@ export async function onRequest(context) {
           VALUES (?, ?, '+994 50 000 00 00', ?, 'seller', '', 50.0, 1, ?, ?)
         `).bind(full_name, email, passHash, initials, now).run();
         user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(res.meta.last_row_id).first();
+      }
+
+      if (path === "/api/auth/send-email-otp") {
+        return jsonResp({ sent: true, user });
       }
 
       const token = randomHex(24);
@@ -308,4 +315,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-        }
+}
