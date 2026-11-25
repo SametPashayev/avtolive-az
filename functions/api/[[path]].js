@@ -103,15 +103,8 @@ async function ensureSchema(db) {
     )
   `).run();
 
-  const demoCheck = await db.prepare("SELECT COUNT(*) as cnt FROM users").first();
-  if (!demoCheck || demoCheck.cnt === 0) {
-    const passHash = await sha256("123456");
-    const now = new Date().toISOString();
-    await db.prepare(`
-      INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind("Rəşad Məmmədov", "rashad@avtolive.az", "+994 50 210 44 55", passHash, "salon", "Baku Luxury Motors", 150.0, 1, "RM", now).run();
-  }
+  // Clean up test user if still present
+  await db.prepare("DELETE FROM users WHERE email = 'rashad@avtolive.az'").run();
 }
 
 function parseListingRow(r) {
@@ -182,21 +175,26 @@ export async function onRequest(context) {
         return jsonResp({ error: "Bütün xanaları doldurun" }, 400);
       }
 
-      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
-      if (existing) {
-        return jsonResp({ error: "Bu e-poçt ünvanı artıq qeydiyyatdan keçib" }, 400);
-      }
-
       const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
       const passHash = await sha256(password);
       const now = new Date().toISOString();
+      const verifiedFlag = data.verified === 0 ? 0 : 1;
 
-      const res = await db.prepare(`
-        INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
-        VALUES (?, ?, ?, ?, 'seller', '', 50.0, 1, ?, ?)
-      `).bind(full_name, email, phone, passHash, initials, now).run();
+      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
+      let userId;
+      if (existing) {
+        userId = existing.id;
+        await db.prepare(`
+          UPDATE users SET full_name = ?, phone = ?, password_hash = ?, verified = ?, avatar = ? WHERE id = ?
+        `).bind(full_name, phone, passHash, verifiedFlag, initials, userId).run();
+      } else {
+        const res = await db.prepare(`
+          INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
+          VALUES (?, ?, ?, ?, 'seller', '', 50.0, ?, ?, ?)
+        `).bind(full_name, email, phone, passHash, verifiedFlag, initials, now).run();
+        userId = res.meta.last_row_id;
+      }
 
-      const userId = res.meta.last_row_id;
       const token = randomHex(24);
       await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, userId, now).run();
       const user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(userId).first();
