@@ -1622,25 +1622,41 @@ async function handleRegisterSendCode(e) {
   const phone = document.getElementById("regPhone").value.trim();
   const password = document.getElementById("regPass").value;
   const btn = document.getElementById("btnRegSendCode");
-  if (btn) btn.textContent = "Kod Göndərilir...";
+  const verifyBox = document.getElementById("regVerifyBox");
+  if (btn) btn.textContent = "Yoxlanılır...";
 
-  const generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
-  localStorage.setItem("avtolive_pending_reg_otp_" + email, generatedOtp);
-
-  // Immediately save user record into Cloudflare D1 database so it appears in D1 users table right away
+  // 1. Check Cloudflare D1 database if this email is already registered
   try {
-    await fetch(D1_API_BASE + "/api/auth/register", {
+    const res = await fetch(D1_API_BASE + "/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ full_name: name, email, phone, password, verified: 0 })
     });
-  } catch (err) {}
+    const data = await res.json();
+    if (!res.ok || data.already_exists || data.error) {
+      if (btn) btn.textContent = "E-poçta Təsdiq Kodu Göndər";
+      if (verifyBox) verifyBox.style.display = "none";
+      showToast(data.error || "Bu e-poçt ünvanı artıq qeydiyyatdan keçib! Bir e-poçt ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.");
+      return;
+    }
+  } catch (err) {
+    // Fallback local duplicate check
+    const localUsers = JSON.parse(localStorage.getItem("avtolive_registered_users") || "[]");
+    if (localUsers.some(u => (u.email || "").toLowerCase() === email)) {
+      if (btn) btn.textContent = "E-poçta Təsdiq Kodu Göndər";
+      if (verifyBox) verifyBox.style.display = "none";
+      showToast("Bu e-poçt ünvanı artıq qeydiyyatdan keçib! Bir e-poçt ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.");
+      return;
+    }
+  }
+
+  const generatedOtp = String(Math.floor(1000 + Math.random() * 9000));
+  localStorage.setItem("avtolive_pending_reg_otp_" + email, generatedOtp);
 
   await dispatchRealEmailOtp(email, generatedOtp, name);
 
   if (btn) btn.textContent = "Kodu Yenidən Göndər";
-  const verifyBox = document.getElementById("regVerifyBox");
-  verifyBox.style.display = "flex";
+  if (verifyBox) verifyBox.style.display = "flex";
   document.getElementById("regOtpCodeInput").value = "";
   document.getElementById("regOtpCodeInput").focus();
   document.getElementById("regOtpSentHint").innerHTML = `4 rəqəmli təsdiq kodu <strong>${email}</strong> ünvanına göndərildi. Lütfən e-poçt qutunuzu (və ya Spam qovluğunu) yoxlayın.`;
@@ -1781,10 +1797,11 @@ async function handleRegister(e) {
   e.preventDefault();
   const payload = {
     full_name: document.getElementById("regName").value.trim(),
-    email: document.getElementById("regEmail").value.trim(),
+    email: document.getElementById("regEmail").value.trim().toLowerCase(),
     phone: document.getElementById("regPhone").value.trim(),
     password: document.getElementById("regPass").value,
-    verified: 1
+    verified: 1,
+    step: "verify_code"
   };
   try {
     const res = await fetch(D1_API_BASE + "/api/auth/register", {
@@ -1792,18 +1809,20 @@ async function handleRegister(e) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.token) {
-        state.token = data.token;
-        state.user = data.user;
-        localStorage.setItem("avtolive_token", data.token);
-        localStorage.setItem("avtolive_user", JSON.stringify(data.user));
-        updateAuthUI();
-        closeModal("authModal");
-        showToast("Qeydiyyat tamamlandı. Hesabınıza 50 ₼ hədiyyə balans yükləndi.");
-        return;
-      }
+    const data = await res.json();
+    if (!res.ok || data.already_exists || data.error) {
+      showToast(data.error || "Bu e-poçt ünvanı artıq qeydiyyatdan keçib!");
+      return;
+    }
+    if (data.token) {
+      state.token = data.token;
+      state.user = data.user;
+      localStorage.setItem("avtolive_token", data.token);
+      localStorage.setItem("avtolive_user", JSON.stringify(data.user));
+      updateAuthUI();
+      closeModal("authModal");
+      showToast("Qeydiyyat tamamlandı. Hesabınıza 50 ₼ hədiyyə balans yükləndi.");
+      return;
     }
   } catch (err) {}
 
