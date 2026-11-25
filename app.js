@@ -1605,9 +1605,9 @@ async function dispatchRealEmailOtp(email, code, name) {
     } catch (e) {}
   }
 
-  // Also notify local backend if running locally
+  // Also notify Cloudflare D1 backend
   try {
-    await fetch("/api/auth/send-email-otp", {
+    await fetch(D1_API_BASE + "/api/auth/send-email-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code, name })
