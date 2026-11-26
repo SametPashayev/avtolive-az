@@ -1569,8 +1569,10 @@ function openAuthModal(defaultTab = "login") {
         </p>
         <form id="regStep1Form" onsubmit="handleRegisterSendCode(event)" style="display:flex;flex-direction:column;gap:12px;">
           <input type="text" class="form-input" id="regName" placeholder="Ad və Soyad (və ya Avtosalon Adı) *" required />
-          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Təsdiq kodu bura gələcək) *" required />
-          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda zəng üçün) *" required />
+          <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Təsdiq kodu bura gələcək) *" oninput="scheduleAvailabilityCheck()" required />
+          <div class="field-hint" id="regEmailHint"></div>
+          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda zəng üçün) *" oninput="scheduleAvailabilityCheck()" required />
+          <div class="field-hint" id="regPhoneHint"></div>
           <input type="password" class="form-input" id="regPass" placeholder="Parol təyin edin (min. 6 simvol) *" required />
           <button type="submit" class="btn-primary" id="btnRegSendCode" style="justify-content:center;">E-poçta Təsdiq Kodu Göndər</button>
         </form>
@@ -1615,8 +1617,73 @@ async function dispatchRealEmailOtp(email, code, name) {
   } catch (e) {}
 }
 
+// Live inline availability check for registration email & phone
+let availabilityTimer = null;
+state.regBlocked = { email: false, phone: false };
+
+function scheduleAvailabilityCheck() {
+  clearTimeout(availabilityTimer);
+  availabilityTimer = setTimeout(runAvailabilityCheck, 450);
+}
+
+function setFieldHint(id, inputId, msg, ok) {
+  const hint = document.getElementById(id);
+  const input = document.getElementById(inputId);
+  if (!hint || !input) return;
+  hint.textContent = msg || "";
+  hint.className = "field-hint" + (msg ? (ok ? " ok" : " error") : "");
+  input.classList.toggle("input-error", Boolean(msg) && !ok);
+}
+
+function updateRegButtonState() {
+  const btn = document.getElementById("btnRegSendCode");
+  if (!btn) return;
+  const blocked = state.regBlocked.email || state.regBlocked.phone;
+  btn.disabled = blocked;
+  btn.style.opacity = blocked ? "0.5" : "1";
+  btn.style.cursor = blocked ? "not-allowed" : "pointer";
+}
+
+async function runAvailabilityCheck() {
+  const emailEl = document.getElementById("regEmail");
+  const phoneEl = document.getElementById("regPhone");
+  if (!emailEl || !phoneEl) return;
+  const email = emailEl.value.trim().toLowerCase();
+  const phone = phoneEl.value.trim();
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const phoneValid = phone.replace(/\D/g, "").length >= 12;
+
+  if (!emailValid) { state.regBlocked.email = false; setFieldHint("regEmailHint", "regEmail", "", true); }
+  if (!phoneValid) { state.regBlocked.phone = false; setFieldHint("regPhoneHint", "regPhone", "", true); }
+  if (!emailValid && !phoneValid) { updateRegButtonState(); return; }
+
+  try {
+    const res = await fetch(D1_API_BASE + "/api/auth/check-availability", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailValid ? email : "", phone: phoneValid ? phone : "" })
+    });
+    const data = await res.json();
+    if (emailValid) {
+      state.regBlocked.email = Boolean(data.email_taken);
+      setFieldHint("regEmailHint", "regEmail",
+        data.email_taken ? "Bu e-poçt artıq qeydiyyatdan keçib. İkinci dəfə bu e-poçt ilə qeydiyyat mümkün deyil." : "E-poçt istifadəyə yararlıdır.",
+        !data.email_taken);
+    }
+    if (phoneValid) {
+      state.regBlocked.phone = Boolean(data.phone_taken);
+      setFieldHint("regPhoneHint", "regPhone",
+        data.phone_taken ? "Bu telefon nömrəsi artıq qeydiyyatdan keçib. İkinci dəfə bu nömrə ilə qeydiyyat mümkün deyil." : "Nömrə istifadəyə yararlıdır.",
+        !data.phone_taken);
+    }
+  } catch (e) {}
+  updateRegButtonState();
+}
+
 async function handleRegisterSendCode(e) {
   e.preventDefault();
+  await runAvailabilityCheck();
+  if (state.regBlocked.email || state.regBlocked.phone) return;
   const name = document.getElementById("regName").value.trim();
   const email = document.getElementById("regEmail").value.trim().toLowerCase();
   const phone = document.getElementById("regPhone").value.trim();

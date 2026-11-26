@@ -1614,3 +1614,19 @@ body {
     margin: 10px;
   }
 }
+
+/* Inline registration field validation */
+.field-hint {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: -6px;
+  min-height: 0;
+  line-height: 1.35;
+}
+.field-hint:empty { display: none; }
+.field-hint.error { color: #fb7185; }
+.field-hint.ok { color: #34d399; }
+.form-input.input-error {
+  border-color: #e11d48 !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.18);
+}
