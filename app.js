@@ -506,21 +506,12 @@ async function initApp() {
     const res = await fetch(D1_API_BASE + "/api/init", { headers });
     if (!res.ok) throw new Error("Static fallback");
     const data = await res.json();
-    const seed = window.AVTOLIVE_SEED || { listings: [], salons: [], messages: [] };
-    if (Array.isArray(data.db_listings)) {
-      const dbIds = new Set(data.db_listings.map(x => x.id));
-      state.listings = [...data.db_listings, ...(seed.listings || []).filter(x => !dbIds.has(x.id))];
-      state.salons = data.salons || seed.salons || [];
-    } else {
-      state.listings = data.listings || seed.listings || [];
-      state.salons = data.salons || seed.salons || [];
-    }
+    state.listings = Array.isArray(data.db_listings) ? data.db_listings : [];
+    state.salons = Array.isArray(data.salons) ? data.salons : [];
     state.user = data.user || JSON.parse(localStorage.getItem("avtolive_user") || "null");
   } catch (e) {
-    const seed = window.AVTOLIVE_SEED || { listings: [], salons: [], messages: [] };
-    const savedListings = JSON.parse(localStorage.getItem("avtolive_custom_listings") || "null");
-    state.listings = savedListings || seed.listings;
-    state.salons = seed.salons;
+    state.listings = [];
+    state.salons = [];
     state.user = JSON.parse(localStorage.getItem("avtolive_user") || "null");
   }
   updateAuthUI();
@@ -649,6 +640,8 @@ function resetFilters() {
 }
 
 function renderAll() {
+  const badge = document.getElementById("activeUsersBadge");
+  if (badge) badge.textContent = `Aktiv elanlar: ${state.listings.length}`;
   renderFeaturedHeroLive();
   renderLiveStrip();
   applyFilters();
@@ -661,7 +654,17 @@ function renderFeaturedHeroLive() {
   document.getElementById("liveCountNav").textContent = liveCars.length;
 
   const featured = liveCars[0] || state.listings[0];
-  if (!featured) return;
+  if (!featured) {
+    stage.innerHTML = `
+      <div class="hero-live-overlay" style="background:linear-gradient(145deg,#0f172a,#1e3a8a);justify-content:center;align-items:center;text-align:center;gap:14px;">
+        <span class="live-pill-mini" style="font-size:0.78rem;padding:5px 14px;">${iconSvg("broadcast")} CANLI VİTRİN</span>
+        <h3 style="font-size:1.35rem;font-weight:900;color:#fff;">İlk Avtomobil Elanını Siz Paylaşın!</h3>
+        <p style="font-size:0.88rem;color:#cbd5e1;max-width:340px;">Qeydiyyatdan keçin və avtomobilinizi standart qalereya və ya canlı yayımla alıcılara təqdim edin.</p>
+        <button class="btn-primary" onclick="openPostModal(true)">${iconSvg("plus")} Yeni Elan Yerləşdir</button>
+      </div>
+    `;
+    return;
+  }
 
   const dict = I18N[state.lang];
   stage.innerHTML = `
@@ -673,7 +676,7 @@ function renderFeaturedHeroLive() {
           ${featured.is_live ? 'CANLI YAYIM / LIVE' : 'VIP VİTRİN'}
         </span>
         <span class="viewer-count-pill">
-          ${iconSvg("eye")} ${featured.live_viewers || 142} izləyici
+          ${iconSvg("eye")} ${featured.live_viewers || 0} izləyici
         </span>
       </div>
 
@@ -702,6 +705,16 @@ function renderLiveStrip() {
   const liveCars = state.listings.filter(c => c.is_live === 1);
   const dict = I18N[state.lang];
 
+  if (!liveCars.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;text-align:center;">
+        <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:6px;">Hazırda aktiv canlı yayım yoxdur</div>
+        <div style="font-size:0.86rem;color:#64748b;margin-bottom:14px;">Öz avtomobiliniz üçün ilk canlı yayımı elə indi başladın.</div>
+        <button class="btn-primary" onclick="openPostModal(true)">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
+      </div>
+    `;
+    return;
+  }
   grid.innerHTML = liveCars.map(car => `
     <div class="live-card" onclick="openCarDetail(${car.id})">
       <div class="live-card-media">
@@ -872,6 +885,16 @@ function updateFavBadge() {
 function renderSalons() {
   const grid = document.getElementById("salonsGrid");
   if (!grid) return;
+  if (!state.salons.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:32px;text-align:center;">
+        <div style="font-weight:800;font-size:1.05rem;color:#0f172a;margin-bottom:6px;">Hazırda qeydiyyatdan keçmiş avtosalon yoxdur</div>
+        <div style="font-size:0.88rem;color:#64748b;margin-bottom:16px;">Avtosalon hesabınızı açaraq bütün avtomobillərinizi vahid vitrində təqdim edə bilərsiniz.</div>
+        <button class="btn-primary" onclick="openAuthModal('register')">${iconSvg("salon")} Avtosalon Hesabı Aç</button>
+      </div>
+    `;
+    return;
+  }
   grid.innerHTML = state.salons.map(s => {
     const desc = state.lang === "tr" ? s.description_tr : state.lang === "ru" ? s.description_ru : s.description_az;
     return `
@@ -1252,7 +1275,7 @@ async function toggleLiveStatus(listingId, newLive) {
   const idx = state.listings.findIndex(c => c.id === listingId);
   if (idx !== -1) {
     state.listings[idx].is_live = newLive === 1 ? 1 : 0;
-    state.listings[idx].live_viewers = newLive === 1 ? 18 : 0;
+    state.listings[idx].live_viewers = newLive === 1 ? 1 : 0;
     localStorage.setItem("avtolive_custom_listings", JSON.stringify(state.listings));
     renderAll();
     openCarDetail(listingId);
@@ -1435,7 +1458,7 @@ async function submitNewListing(e) {
     tier: payload.tier,
     is_live: payload.start_live ? 1 : 0,
     live_title: payload.live_title || `CANLI: ${payload.brand} ${payload.model} (${payload.year})`,
-    live_viewers: payload.start_live ? 24 : 0,
+    live_viewers: payload.start_live ? 1 : 0,
     live_stream_url: "",
     images: finalImages,
     features: ["360° Kamera", "Dəri Salon", "Lyuk", "Apple CarPlay", "LED Faralar"],
