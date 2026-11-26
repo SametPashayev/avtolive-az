@@ -678,7 +678,7 @@ function renderFeaturedHeroLive() {
       </div>
 
       <div>
-        <div style="font-size:0.81rem;color:#fda4af;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+        <div style="font-size:0.81rem;color:#2563eb;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
           ${iconSvg("salon")} ${featured.seller_name} • ${featured.city}
         </div>
         <h3 style="font-size:1.4rem;font-weight:900;margin-bottom:6px;">
@@ -715,8 +715,8 @@ function renderLiveStrip() {
       </div>
       <div class="live-card-body">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-          <span style="font-size:1.18rem;font-weight:900;color:#fff;">${formatPrice(car.price)}</span>
-          <span style="font-size:0.78rem;color:#fda4af;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+          <span style="font-size:1.18rem;font-weight:900;color:#2563eb;">${formatPrice(car.price)}</span>
+          <span style="font-size:0.78rem;color:#2563eb;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
             ${iconSvg("pin")} ${car.city}
           </span>
         </div>
@@ -1123,7 +1123,7 @@ async function loadLiveMessages(listingId) {
     const msgs = data.messages || [];
     box.innerHTML = msgs.map(m => `
       <div class="chat-bubble ${m.is_seller ? 'seller' : ''}">
-        <div style="display:flex;justify-content:space-between;font-size:0.74rem;color:${m.is_seller ? '#fda4af' : '#94a3b8'};font-weight:700;margin-bottom:3px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.74rem;color:${m.is_seller ? '#2563eb' : '#94a3b8'};font-weight:700;margin-bottom:3px;">
           <span>${m.user_name}</span>
           <span>${m.created_at}</span>
         </div>
@@ -1554,7 +1554,7 @@ function openAuthModal(defaultTab = "login") {
         </form>
 
         <form id="otpVerifyBox" onsubmit="handleVerifyEmailOtp(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.35);border-radius:12px;">
-          <div style="font-size:0.82rem;color:#fda4af;font-weight:700;" id="otpSentHint">
+          <div style="font-size:0.82rem;color:#2563eb;font-weight:700;" id="otpSentHint">
             4 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi.
           </div>
           <input type="text" class="form-input" id="otpCodeInput" placeholder="4 rəqəmli kodu daxil edin" maxlength="6" style="font-size:1.15rem;font-weight:800;letter-spacing:4px;text-align:center;" required />
