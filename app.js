@@ -939,7 +939,7 @@ async function openCarDetail(id) {
   body.innerHTML = `
     <div class="live-studio-grid">
       <div class="live-video-pane" style="background:#060911;">
-        ${car.is_live && car.live_stream_url ? `
+        ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
           <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${car.images[0]}"></video>
         ` : `
           <div style="display:flex;flex-direction:column;height:100%;">

@@ -1901,7 +1901,7 @@ body {
     padding: 5px 12px !important;
     font-size: 0.72rem !important;
   }
-  .top-promo-right {
+  .top-promo-right, .top-promo-bar .top-auth-link, #topAuthArea {
     display: none !important;
   }
   .navbar-inner {
