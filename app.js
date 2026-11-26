@@ -919,7 +919,7 @@ async function openCarDetail(id) {
   document.getElementById("modalCarTitle").textContent = `${car.brand} ${car.model} (${car.year}) — ${formatPrice(car.price)}`;
   const badge = document.getElementById("modalLiveBadge");
   if (car.is_live) {
-    badge.style.background = "linear-gradient(135deg, #ff2a4b, #be123c)";
+    badge.style.background = "linear-gradient(135deg, #2563eb, #1d4ed8)";
     badge.innerHTML = `${iconSvg("broadcast")} CANLI YAYIM (${car.live_viewers} izləyici)`;
   } else {
     badge.style.background = "#059669";
@@ -983,7 +983,7 @@ async function openCarDetail(id) {
             ${car.barter ? `<span class="badge-fin">${iconSvg("refresh")} Barter mümkündür</span>` : ''}
             ${car.is_new || car.mileage === 0 ? `<span class="badge-tier badge-new">Yeni (0 km)</span>` : ''}
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;background:#080d19;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);">
+          <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);">
             <div>
               <div style="font-weight:800;font-size:0.88rem;">${car.seller_name}</div>
               <div style="font-size:0.77rem;color:var(--text-muted);">${car.city}</div>
@@ -1040,7 +1040,7 @@ async function openCarDetail(id) {
         </div>
       </div>
 
-      <div style="background:#080d19;border:1px solid var(--border-color);border-radius:14px;padding:18px;">
+      <div style="background:#f8fafc;border:1px solid var(--border-color);border-radius:14px;padding:18px;">
         <h4 style="font-size:0.96rem;font-weight:800;margin-bottom:12px;">Texniki Göstəricilər</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.85rem;">
           <div style="color:var(--text-muted);">Şəhər:</div><div style="font-weight:700;">${car.city}</div>
@@ -1503,7 +1503,7 @@ function openAuthModal(defaultTab = "login") {
         <h4 style="font-size:0.92rem;margin-bottom:8px;">Mənim Elanlarım (${myAds.length})</h4>
         <div style="display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto;">
           ${myAds.map(a => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#080d19;border-radius:10px;font-size:0.84rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:0.84rem;">
               <span><strong>${a.brand} ${a.model}</strong> (${formatPrice(a.price)})</span>
               <button class="btn-primary" style="padding:4px 10px;font-size:0.75rem;" onclick="closeModal('authModal');openCarDetail(${a.id});">
                 ${a.is_live ? 'Yayımı İdarə Et' : 'Elana Bax'}
@@ -1553,7 +1553,7 @@ function openAuthModal(defaultTab = "login") {
           </div>
         </form>
 
-        <form id="otpVerifyBox" onsubmit="handleVerifyEmailOtp(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(225,29,72,0.1);border:1px solid rgba(225,29,72,0.35);border-radius:12px;">
+        <form id="otpVerifyBox" onsubmit="handleVerifyEmailOtp(event)" style="display:none;flex-direction:column;gap:12px;margin-top:16px;padding:14px;background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.35);border-radius:12px;">
           <div style="font-size:0.82rem;color:#fda4af;font-weight:700;" id="otpSentHint">
             4 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi.
           </div>
