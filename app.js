@@ -919,7 +919,7 @@ async function openCarDetail(id) {
   document.getElementById("modalCarTitle").textContent = `${car.brand} ${car.model} (${car.year}) — ${formatPrice(car.price)}`;
   const badge = document.getElementById("modalLiveBadge");
   if (car.is_live) {
-    badge.style.background = "linear-gradient(135deg, #2563eb, #1d4ed8)";
+    badge.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
     badge.innerHTML = `${iconSvg("broadcast")} CANLI YAYIM (${car.live_viewers} izləyici)`;
   } else {
     badge.style.background = "#059669";

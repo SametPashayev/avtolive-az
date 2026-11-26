@@ -1799,3 +1799,40 @@ body {
   border-top: 1px solid #e2e8f0 !important;
   color: #475569 !important;
 }
+/* ============================================================
+   RED HIGHLIGHT FOR ALL "CANLI" / "LIVE" ELEMENTS (v14)
+   ============================================================ */
+.live-pill-mini {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.35) !important;
+}
+.live-pill-mini .pulse-dot {
+  background: #ffffff !important;
+}
+.nav-btn.live-nav {
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+}
+.nav-btn.live-nav svg {
+  color: #dc2626 !important;
+}
+.nav-btn.live-nav .nav-counter {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+}
+.nav-btn.live-nav:hover,
+.nav-btn.live-nav.active {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+  border-color: #fecaca !important;
+}
+.live-ring-badge {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4) !important;
+}
+.live-dot-white {
+  background: #ffffff !important;
+}

@@ -1,37 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 76" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 78" fill="none">
   <defs>
-    <linearGradient id="proBlueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#1E3A8A"/>
+    <linearGradient id="avtoBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0C548E"/>
+      <stop offset="100%" stop-color="#093D6B"/>
     </linearGradient>
-    <linearGradient id="proAccentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38BDF8"/>
-      <stop offset="100%" stop-color="#FFFFFF"/>
+    <linearGradient id="liveRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#DC2626"/>
     </linearGradient>
   </defs>
 
-  <!-- Precision Geometric Emblem -->
-  <g transform="translate(4, 6)">
-    <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#proBlueGrad)"/>
-    <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" stroke="#93C5FD" stroke-opacity="0.35" stroke-width="1.5"/>
-
-    <!-- Minimalist Aerodynamic Fastback Roofline & Horizon -->
-    <path d="M11 40.5 C16 32.5, 24 25.5, 35.5 25.5 C43.5 25.5, 49.5 29.5, 54 35.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
-    <path d="M9 44.5 H55" stroke="url(#proAccentGrad)" stroke-width="2.6" stroke-linecap="round"/>
-    <!-- Subtle Wheel Arcs -->
-    <circle cx="20.5" cy="44.5" r="3.6" fill="#1E3A8A" stroke="#FFFFFF" stroke-width="2.2"/>
-    <circle cx="44.5" cy="44.5" r="3.6" fill="#1E3A8A" stroke="#FFFFFF" stroke-width="2.2"/>
-
-    <!-- Minimal Live Signal Pulse (Top Right) -->
-    <circle cx="49" cy="16" r="3.2" fill="#38BDF8">
-      <animate attributeName="opacity" values="1;0.45;1" dur="1.8s" repeatCount="indefinite"/>
-    </circle>
-    <path d="M44 11.5 A7 7 0 0 1 53.5 21" stroke="#BAE6FD" stroke-width="1.8" stroke-linecap="round" opacity="0.85"/>
+  <!-- Steering Wheel 'A' with Top Signal Arcs -->
+  <g transform="translate(8, 12)">
+    <!-- Mini signal arcs above steering wheel -->
+    <path d="M16 4 A10 10 0 0 1 28 4" stroke="#0C548E" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M13 1 A14 14 0 0 1 31 1" stroke="#0C548E" stroke-width="1.6" stroke-linecap="round" opacity="0.85"/>
+    <!-- Steering wheel outer ring -->
+    <circle cx="22" cy="27" r="18" stroke="url(#avtoBlue)" stroke-width="5.2" fill="none"/>
+    <!-- Steering wheel spokes -->
+    <path d="M7 24.5 Q22 21 37 24.5" stroke="url(#avtoBlue)" stroke-width="4.2" stroke-linecap="round" fill="none"/>
+    <path d="M22 28 V43" stroke="url(#avtoBlue)" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Center hub with red play dot -->
+    <circle cx="22" cy="27" r="5" fill="#FFFFFF" stroke="url(#avtoBlue)" stroke-width="2"/>
+    <polygon points="20.7,24.8 24.8,27 20.7,29.2" fill="#DC2626"/>
   </g>
 
-  <!-- Precision Wordmark (Single <text> with <tspan> = Zero Overlap) -->
-  <text x="82" y="40" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-size="30" letter-spacing="-0.6">
-    <tspan font-weight="800" fill="#0F172A">AVTO</tspan><tspan font-weight="800" fill="#2563EB">LIVE</tspan><tspan font-weight="700" font-size="22" fill="#64748B">.az</tspan>
-  </text>
-  <text x="83" y="57" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif" font-weight="600" font-size="10" letter-spacing="2.1" fill="#64748B">CANLI AVTOMOBİL BAZARI</text>
+  <!-- 'VT' in Deep Automotive Blue -->
+  <text x="53" y="54" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-weight="900" font-size="40" letter-spacing="-1" fill="url(#avtoBlue)">VT</text>
+
+  <!-- 'O' with Red Play Triangle Inside -->
+  <g transform="translate(107, 23)">
+    <circle cx="16.5" cy="17" r="14.2" stroke="url(#avtoBlue)" stroke-width="6.2" fill="none"/>
+    <polygon points="13.5,11 23,17 13.5,23" fill="url(#liveRed)"/>
+  </g>
+
+  <!-- 'LİVE' in Bold Red + Blue Broadcast Waves Above 'İ' -->
+  <g transform="translate(143, 0)">
+    <!-- Broadcast Waves above İ -->
+    <path d="M25 14 A13 13 0 0 1 43 14" stroke="#0C548E" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M20 9.5 A20 20 0 0 1 48 9.5" stroke="#0C548E" stroke-width="2.6" stroke-linecap="round" opacity="0.9"/>
+    <!-- Red dot for İ -->
+    <circle cx="34" cy="19.5" r="3.4" fill="url(#liveRed)"/>
+
+    <!-- L I V E letters (dotless I + red dot above = İ) -->
+    <text x="0" y="54" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-weight="900" font-size="40" letter-spacing="0.5" fill="url(#liveRed)">LIVE</text>
+  </g>
+
+  <!-- Subtitle -->
+  <text x="12" y="71" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-weight="700" font-size="10.2" letter-spacing="1.65" fill="#1E3A5F">CANLI AVTOMOBİL BAZARI • AVTOLIVE.AZ</text>
 </svg>
