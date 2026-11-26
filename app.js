@@ -975,25 +975,32 @@ async function openCarDetail(id) {
           </div>
         `}
 
+        <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isListingOwner(car) && car.is_live ? 'flex' : 'none'};"></div>
         <div class="live-controls-bar" style="${!car.is_live ? 'position:static;margin:12px 16px;' : ''}">
           <div>
             <div style="font-weight:800;font-size:0.9rem;color:#fff;">
               ${car.is_live ? (car.live_title || 'Canlı Avtomobil Təqdimatı') : `${car.brand} ${car.model} — Foto Qalereya`}
             </div>
-            <div style="font-size:0.78rem;color:#94a3b8;">
+            <div style="font-size:0.78rem;color:#cbd5e1;">
               Satıcı: ${car.seller_name} • ${car.seller_phone}
             </div>
           </div>
 
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${car.is_live ? `
-              <button class="btn-primary" id="btnToggleWebcam" onclick="toggleSellerWebcam(${car.id})" style="padding:8px 13px;font-size:0.8rem;">
-                ${iconSvg("video")} ${dict.start_camera_btn}
-              </button>
-            ` : ''}
-            <button class="btn-secondary" onclick="toggleLiveStatus(${car.id}, ${car.is_live ? 0 : 1})" style="padding:8px 13px;font-size:0.8rem;">
-              ${iconSvg("broadcast")} ${car.is_live ? 'Canlı Yayımı Bitir (Standart Elana Keç)' : 'Bu Elan Üçün Canlı Yayım Aç'}
-            </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            ${isListingOwner(car) ? `
+              ${car.is_live ? `
+                <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
+                <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
+                <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
+                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;background:#dc2626 !important;">Canlı Yayımı Bitir</button>
+              ` : `
+                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
+              `}
+            ` : `
+              ${car.is_live ? `
+                <button type="button" class="live-ctrl-btn" id="btnViewerSound" onclick="toggleViewerAudio()">Səs: Bağlı (Aç)</button>
+              ` : ''}
+            `}
           </div>
         </div>
       </div>
@@ -1056,6 +1063,10 @@ async function openCarDetail(id) {
             ${iconSvg("phone")} Satıcıya Zəng Et: ${car.seller_phone}
           </a>
           <button class="btn-secondary" onclick="shareListing(${car.id})">Elanı Paylaş</button>
+          ${isListingOwner(car) ? `
+            <button class="btn-secondary" onclick="closeModal('liveDetailModal');openEditListingModal(${car.id})">Redaktə Et</button>
+            <button class="btn-secondary" onclick="closeModal('liveDetailModal');deleteMyListing(${car.id})" style="color:#dc2626 !important;border-color:#fecaca !important;">Elanı Sil</button>
+          ` : ''}
           ${car.tier !== 'vip' ? `
             <button class="btn-primary" onclick="promoteCarToVip(${car.id})">
               ${iconSvg("crown")} 9 ₼ ilə VIP Vitrinə Qaldır (-55%)
@@ -1086,8 +1097,22 @@ async function openCarDetail(id) {
 
   document.getElementById("liveDetailModal").classList.add("open");
   loadLiveMessages(car.id);
-  if (car.is_live && !state.webcamStream) {
-    connectAsLiveViewer(car.id);
+  if (_liveChatPollTimer) clearInterval(_liveChatPollTimer);
+  _liveChatPollTimer = setInterval(() => {
+    const modal = document.getElementById("liveDetailModal");
+    if (modal && modal.classList.contains("open")) {
+      loadLiveMessages(car.id);
+    } else {
+      clearInterval(_liveChatPollTimer);
+      _liveChatPollTimer = null;
+    }
+  }, 2500);
+  if (car.is_live) {
+    if (isListingOwner(car) && !state.webcamStream) {
+      startOwnerBroadcast(car.id);
+    } else if (!isListingOwner(car) && !state.webcamStream) {
+      connectAsLiveViewer(car.id);
+    }
   }
 }
 
@@ -1140,7 +1165,7 @@ function connectAsLiveViewer(listingId) {
 
 async function loadLiveMessages(listingId) {
   try {
-    const res = await fetch(`/api/live/${listingId}/messages`);
+    const res = await fetch(`${D1_API_BASE}/api/live/${listingId}/messages`);
     const data = await res.json();
     const box = document.getElementById("liveChatContainer");
     if (!box) return;
@@ -1155,6 +1180,14 @@ async function loadLiveMessages(listingId) {
       </div>
     `).join("");
     box.scrollTop = box.scrollHeight;
+    const overlay = document.getElementById("broadcasterChatOverlay");
+    if (overlay) {
+      const recent = msgs.slice(-5);
+      overlay.innerHTML = recent.map(m => `
+        <div class="broadcaster-chat-item"><strong>${m.user_name}:</strong>${m.message}</div>
+      `).join("");
+      overlay.scrollTop = overlay.scrollHeight;
+    }
   } catch (e) {
     console.error(e);
   }
@@ -1252,10 +1285,22 @@ async function toggleSellerWebcam(listingId) {
 }
 
 async function toggleLiveStatus(listingId, newLive) {
+  if (!state.user || !state.token) {
+    showToast("Yalnız elan sahibi canlı yayım aça bilər", "error");
+    return;
+  }
+  if (newLive === 0 && state.webcamStream) {
+    state.webcamStream.getTracks().forEach(t => t.stop());
+    state.webcamStream = null;
+    if (state.broadcasterPeer) {
+      state.broadcasterPeer.destroy();
+      state.broadcasterPeer = null;
+    }
+  }
   try {
-    const res = await fetch(`/api/live/${listingId}/toggle`, {
+    const res = await fetch(`${D1_API_BASE}/api/live/${listingId}/toggle`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
       body: JSON.stringify({ is_live: newLive === 1 })
     });
     if (res.ok) {
@@ -1363,7 +1408,20 @@ function renderUploadedPhotoPreviews() {
   `).join("");
 }
 
+
+function isListingOwner(car) {
+  if (!state.user || !car) return false;
+  return car.user_id === state.user.id || (Boolean(car.seller_phone) && Boolean(state.user.phone) && car.seller_phone === state.user.phone);
+}
+let _liveChatPollTimer = null;
+let _camFacingMode = "environment";
+
 function openPostModal(startLive = false, tier = "standard") {
+  if (!state.user || !state.token) {
+    showToast("Elan paylaşmaq üçün əvvəlcə hesabınıza daxil olun", "error");
+    openAuthModal("login");
+    return;
+  }
   document.getElementById("pStartLive").checked = startLive;
   document.getElementById("liveTitleRow").style.display = startLive ? "flex" : "none";
   document.getElementById("pTier").value = tier;
@@ -1378,6 +1436,12 @@ function openPostModal(startLive = false, tier = "standard") {
 
 async function submitNewListing(e) {
   e.preventDefault();
+  if (!state.user || !state.token) {
+    showToast("Elan paylaşmaq üçün əvvəlcə hesabınıza daxil olun", "error");
+    closeModal("postAdModal");
+    openAuthModal("login");
+    return;
+  }
   const defaultPhoto = "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80";
   const finalImages = state.uploadedPhotos.length > 0 ? [...state.uploadedPhotos] : [defaultPhoto];
 
@@ -2210,4 +2274,88 @@ function openInfoModal(topic) {
   titleEl.textContent = p.t;
   bodyEl.innerHTML = p.b;
   document.getElementById("infoModal").classList.add("open");
+}
+async function startOwnerBroadcast(listingId) {
+  if (state.webcamStream) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _camFacingMode },
+      audio: true
+    }).catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
+    state.webcamStream = stream;
+    const pane = document.querySelector("#liveDetailModal .live-video-pane");
+    if (pane) {
+      let vid = document.getElementById("studioVideoEl");
+      if (!vid) {
+        const img = document.getElementById("studioMainImg");
+        vid = document.createElement("video");
+        vid.id = "studioVideoEl";
+        vid.autoplay = true;
+        vid.muted = true;
+        vid.playsInline = true;
+        vid.style.width = "100%";
+        vid.style.height = "420px";
+        vid.style.objectFit = "cover";
+        if (img && img.parentElement) img.parentElement.replaceWith(vid);
+        else pane.prepend(vid);
+      }
+      vid.srcObject = stream;
+      vid.play().catch(() => {});
+    }
+    if (typeof Peer !== "undefined") {
+      if (state.broadcasterPeer) state.broadcasterPeer.destroy();
+      const peer = new Peer("avtolive-az-live-car-" + listingId);
+      state.broadcasterPeer = peer;
+      peer.on("call", (call) => call.answer(stream));
+    }
+    showToast("Canlı yayım (Kamera + Mikrofon) başladı!", "success");
+  } catch (err) {
+    showToast("Kamera və ya mikrofon icazəsi verilmədi", "error");
+  }
+}
+
+function toggleBroadcastMic() {
+  if (!state.webcamStream) return;
+  const audioTracks = state.webcamStream.getAudioTracks();
+  if (!audioTracks.length) return showToast("Mikrofon tapılmadı", "error");
+  const next = !audioTracks[0].enabled;
+  audioTracks.forEach(t => t.enabled = next);
+  const btn = document.getElementById("btnToggleMic");
+  if (btn) {
+    btn.textContent = next ? "Mikrofon: Açıq" : "Mikrofon: Bağlı";
+    btn.classList.toggle("muted", !next);
+  }
+}
+
+function toggleBroadcastCam() {
+  if (!state.webcamStream) return;
+  const videoTracks = state.webcamStream.getVideoTracks();
+  if (!videoTracks.length) return showToast("Kamera tapılmadı", "error");
+  const next = !videoTracks[0].enabled;
+  videoTracks.forEach(t => t.enabled = next);
+  const btn = document.getElementById("btnToggleCam");
+  if (btn) {
+    btn.textContent = next ? "Kamera: Açıq" : "Kamera: Bağlı";
+    btn.classList.toggle("muted", !next);
+  }
+}
+
+async function flipBroadcastCamera(listingId) {
+  _camFacingMode = _camFacingMode === "environment" ? "user" : "environment";
+  if (state.webcamStream) {
+    state.webcamStream.getTracks().forEach(t => t.stop());
+    state.webcamStream = null;
+  }
+  await startOwnerBroadcast(listingId);
+}
+
+function toggleViewerAudio() {
+  const vid = document.getElementById("studioVideoEl");
+  const btn = document.getElementById("btnViewerSound");
+  if (!vid) return showToast("Canlı video hələ başlamayıb", "info");
+  vid.muted = !vid.muted;
+  if (btn) {
+    btn.textContent = vid.muted ? "Səs: Bağlı (Aç)" : "Səs: Açıq";
+    btn.classList.toggle("muted", vid.muted);
+  }
 }
