@@ -174,10 +174,20 @@ export async function onRequest(context) {
     let data = {};
     try { data = await request.json(); } catch (e) {}
 
-    if (path === "/api/auth/check-email") {
+    if (path === "/api/auth/check-email" || path === "/api/auth/check-availability") {
       const email = (data.email || "").trim().toLowerCase();
-      const existing = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
-      return jsonResp({ exists: Boolean(existing) });
+      const phoneDigits = String(data.phone || "").replace(/\D/g, "");
+      let emailTaken = false;
+      let phoneTaken = false;
+      if (email) {
+        const e = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
+        emailTaken = Boolean(e);
+      }
+      if (phoneDigits.length >= 9) {
+        const { results } = await db.prepare("SELECT phone FROM users").all();
+        phoneTaken = (results || []).some(r => String(r.phone || "").replace(/\D/g, "") === phoneDigits);
+      }
+      return jsonResp({ exists: emailTaken, email_taken: emailTaken, phone_taken: phoneTaken });
     }
 
     if (path === "/api/auth/register") {
@@ -207,6 +217,18 @@ export async function onRequest(context) {
           error: "Bu e-poçt ünvanı artıq qeydiyyatdan keçib! Bir e-poçt ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.",
           already_exists: true
         }, 409);
+      }
+
+      const newPhoneDigits = phone.replace(/\D/g, "");
+      if (newPhoneDigits.length >= 9) {
+        const { results: phoneRows } = await db.prepare("SELECT phone FROM users").all();
+        if ((phoneRows || []).some(r => String(r.phone || "").replace(/\D/g, "") === newPhoneDigits)) {
+          return jsonResp({
+            error: "Bu telefon nömrəsi artıq qeydiyyatdan keçib! Bir nömrə ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.",
+            phone_taken: true,
+            already_exists: true
+          }, 409);
+        }
       }
 
       const verifiedFlag = data.verified === 0 ? 0 : 1;
@@ -336,4 +358,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-        }
+                                                                                                  }
