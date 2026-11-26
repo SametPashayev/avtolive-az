@@ -1661,9 +1661,12 @@ body {
 .top-auth-link:hover {
   background: rgba(255, 255, 255, 0.22) !important;
 }
+.top-auth-link.accent,
+.top-auth-link.accent * {
+  color: #1e3a8a !important;
+}
 .top-auth-link.accent {
   background: #ffffff !important;
-  color: #1e3a8a !important;
   border-color: #ffffff !important;
   font-weight: 700 !important;
 }
