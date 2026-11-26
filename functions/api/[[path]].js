@@ -264,6 +264,21 @@ export async function onRequest(context) {
       return jsonResp({ token, user });
     }
 
+    if (path === "/api/auth/reset-password") {
+      const email = (data.email || "").trim().toLowerCase();
+      const newPassword = data.new_password || "";
+      if (!email || newPassword.length < 6) {
+        return jsonResp({ error: "E-poçt və minimum 6 simvollu yeni parol daxil edin" }, 400);
+      }
+      const user = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
+      if (!user) {
+        return jsonResp({ error: "Bu e-poçt ünvanı ilə istifadəçi tapılmadı" }, 404);
+      }
+      const newHash = await sha256(newPassword);
+      await db.prepare("UPDATE users SET password_hash = ?, verified = 1 WHERE id = ?").bind(newHash, user.id).run();
+      return jsonResp({ success: true });
+    }
+
     if (path === "/api/auth/send-email-otp" || path === "/api/auth/verify-email-otp") {
       const email = (data.email || "").trim().toLowerCase();
       if (!email || !email.includes("@")) {
@@ -357,5 +372,66 @@ export async function onRequest(context) {
     }
   }
 
+  if (request.method === "PUT") {
+    let data = {};
+    try { data = await request.json(); } catch (e) {}
+
+    if (path === "/api/auth/profile") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      const full_name = (data.full_name || user.full_name).trim();
+      const phone = (data.phone || user.phone).trim();
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (phoneDigits.length >= 9) {
+        const { results: others } = await db.prepare("SELECT id, phone FROM users WHERE id != ?").bind(user.id).all();
+        if ((others || []).some(u => (u.phone || "").replace(/\D/g, "") === phoneDigits)) {
+          return jsonResp({ error: "Bu telefon nömrəsi başqa hesabda istifadə olunur" }, 409);
+        }
+      }
+      const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || user.avatar;
+      await db.prepare("UPDATE users SET full_name = ?, phone = ?, avatar = ? WHERE id = ?").bind(full_name, phone, initials, user.id).run();
+      const updated = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(user.id).first();
+      return jsonResp({ user: updated });
+    }
+
+    if (path.startsWith("/api/listings/")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
+      if (existing.user_id !== user.id) return jsonResp({ error: "Bu elanı redaktə etmək icazəniz yoxdur" }, 403);
+
+      const price = parseFloat(data.price) || existing.price;
+      const city = (data.city || existing.city).trim();
+      const mileage = data.mileage !== undefined ? (parseInt(data.mileage) || 0) : existing.mileage;
+      const desc = (data.description !== undefined ? data.description : existing.description_az).trim();
+      const credit = data.credit !== undefined ? (data.credit ? 1 : 0) : existing.credit;
+      const barter = data.barter !== undefined ? (data.barter ? 1 : 0) : existing.barter;
+
+      await db.prepare(`
+        UPDATE listings SET price = ?, city = ?, mileage = ?, description_az = ?, description_tr = ?, description_ru = ?, credit = ?, barter = ?
+        WHERE id = ?
+      `).bind(price, city, mileage, desc, desc, desc, credit, barter, listingId).run();
+
+      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      return jsonResp({ listing: parseListingRow(updated) });
+    }
+  }
+
+  if (request.method === "DELETE") {
+    if (path.startsWith("/api/listings/")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      const existing = await db.prepare("SELECT id, user_id FROM listings WHERE id = ?").bind(listingId).first();
+      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
+      if (existing.user_id !== user.id) return jsonResp({ error: "Bu elanı silmək icazəniz yoxdur" }, 403);
+      await db.prepare("DELETE FROM listings WHERE id = ?").bind(listingId).run();
+      await db.prepare("DELETE FROM live_messages WHERE listing_id = ?").bind(listingId).run();
+      return jsonResp({ deleted: true, id: listingId });
+    }
+  }
+
   return jsonResp({ status: "ok" });
-                                                                                                  }
+  }
