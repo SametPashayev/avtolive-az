@@ -939,8 +939,8 @@ async function openCarDetail(id) {
   body.innerHTML = `
     <div class="live-studio-grid">
       <div class="live-video-pane" style="background:#060911;">
-        ${car.is_live ? `
-          <video id="studioVideoEl" src="${car.live_stream_url || 'https://assets.mixkit.co/videos/preview/mixkit-sports-car-driving-in-the-city-at-night-41569-large.mp4'}" autoplay muted loop playsinline controls poster="${car.images[0]}"></video>
+        ${car.is_live && car.live_stream_url ? `
+          <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${car.images[0]}"></video>
         ` : `
           <div style="display:flex;flex-direction:column;height:100%;">
             <img id="studioMainImg" src="${extraPhotos[0]}" style="width:100%;height:420px;object-fit:cover;" />
@@ -976,8 +976,8 @@ async function openCarDetail(id) {
       </div>
 
       <div class="live-chat-pane">
-        <div style="padding:16px;background:#0d1322;border-bottom:1px solid var(--border-color);">
-          <div style="font-size:1.75rem;font-weight:900;color:#fff;margin-bottom:6px;">${formatPrice(car.price)}</div>
+        <div style="padding:16px;background:#ffffff;border-bottom:1px solid var(--border-color);">
+          <div style="font-size:1.75rem;font-weight:900;color:#1d4ed8;margin-bottom:6px;">${formatPrice(car.price)}</div>
           <div style="display:flex;gap:8px;margin-bottom:12px;">
             ${car.credit ? `<span class="badge-fin">${iconSvg("bank")} Kreditlə mümkündür</span>` : ''}
             ${car.barter ? `<span class="badge-fin">${iconSvg("refresh")} Barter mümkündür</span>` : ''}
@@ -1019,7 +1019,7 @@ async function openCarDetail(id) {
     <div class="detail-specs-grid">
       <div>
         <h4 style="font-size:1.05rem;font-weight:800;margin-bottom:12px;">Avtomobil Haqqında Ətraflı Məlumat</h4>
-        <p style="color:#cbd5e1;font-size:0.92rem;line-height:1.65;margin-bottom:18px;">
+        <p style="color:#334155;font-size:0.92rem;line-height:1.65;margin-bottom:18px;">
           ${getDescription(car)}
         </p>
 
@@ -1032,6 +1032,7 @@ async function openCarDetail(id) {
           <a href="tel:${car.seller_phone}" class="btn-success" style="text-decoration:none;">
             ${iconSvg("phone")} Satıcıya Zəng Et: ${car.seller_phone}
           </a>
+          <button class="btn-secondary" onclick="shareListing(${car.id})">Elanı Paylaş</button>
           ${car.tier !== 'vip' ? `
             <button class="btn-primary" onclick="promoteCarToVip(${car.id})">
               ${iconSvg("crown")} 9 ₼ ilə VIP Vitrinə Qaldır (-55%)
@@ -1512,6 +1513,37 @@ function openAuthModal(defaultTab = "login") {
           `).join("") || '<div style="color:var(--text-muted);font-size:0.83rem;">Hələ elanınız yoxdur.</div>'}
         </div>
       </div>
+      <div style="margin-bottom:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+        <div style="font-weight:800;font-size:0.84rem;color:#0f172a;margin-bottom:8px;">Profil Məlumatları</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <input type="text" class="form-input" id="profNameInput" value="${state.user.full_name || ''}" placeholder="Ad Soyad" />
+          <input type="text" class="form-input" id="profPhoneInput" value="${state.user.phone || ''}" placeholder="Telefon" />
+        </div>
+        <button type="button" class="btn-secondary" onclick="saveProfileChanges()" style="width:100%;justify-content:center;font-size:0.8rem;">Profili Yenilə</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div style="font-weight:800;font-size:0.84rem;color:#0f172a;margin-bottom:8px;">Mənim Elanlarım</div>
+        <div id="myListingsBox" style="max-height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+          ${(() => {
+            const mine = state.listings.filter(c => c.user_id === state.user.id || (c.seller_phone && state.user.phone && c.seller_phone === state.user.phone));
+            if (!mine.length) return '<div style="font-size:0.8rem;color:#64748b;">Hələ aktiv elanınız yoxdur.</div>';
+            return mine.map(c => `
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+                <div style="min-width:0;">
+                  <div style="font-weight:700;font-size:0.82rem;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.brand} ${c.model} (${c.year})</div>
+                  <div style="font-size:0.76rem;color:#2563eb;font-weight:700;">${formatPrice(c.price)}</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                  <button type="button" class="btn-secondary" onclick="openEditListingModal(${c.id})" style="padding:4px 8px;font-size:0.74rem;">Redaktə</button>
+                  <button type="button" class="btn-secondary" onclick="deleteMyListing(${c.id})" style="padding:4px 8px;font-size:0.74rem;color:#dc2626;border-color:#fecaca;">Sil</button>
+                </div>
+              </div>
+            `).join("");
+          })()}
+        </div>
+      </div>
+
       <div style="display:flex;gap:10px;">
         <button class="btn-primary" style="flex:1;justify-content:center;" onclick="closeModal('authModal');openPostModal(false);">
           ${iconSvg("plus")} Yeni Elan Yerləşdir
@@ -1533,11 +1565,29 @@ function openAuthModal(defaultTab = "login") {
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
           Qeydiyyatdan keçdiyiniz e-poçt ünvanı və parolunuzla daxil olun.
         </p>
-        <form onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:12px;">
+        <form id="loginMainForm" onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:12px;">
           <input type="email" class="form-input" id="loginEmail" placeholder="E-poçt ünvanınız (məs: adiniz@gmail.com)" required />
           <input type="password" class="form-input" id="loginPass" placeholder="Parolunuz" required />
+          <div style="text-align:right;">
+            <button type="button" onclick="toggleForgotBox(true)" style="background:none;border:none;color:#2563eb;font-size:0.8rem;font-weight:600;cursor:pointer;">Şifrəni unutdum?</button>
+          </div>
           <button type="submit" class="btn-primary" style="justify-content:center;">Hesaba Daxil Ol</button>
         </form>
+        <div id="forgotPassBox" style="display:none;flex-direction:column;gap:10px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:0.88rem;color:#0f172a;">Şifrəni Bərpa Et</strong>
+            <button type="button" onclick="toggleForgotBox(false)" style="background:none;border:none;color:#64748b;font-size:0.78rem;cursor:pointer;">Geri</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="email" class="form-input" id="forgotEmail" placeholder="Qeydiyyatlı e-poçtunuz" />
+            <button type="button" class="btn-secondary" id="btnForgotSend" onclick="handleForgotSendOtp()" style="white-space:nowrap;">Kod Göndər</button>
+          </div>
+          <div id="forgotStep2" style="display:none;flex-direction:column;gap:8px;">
+            <input type="text" class="form-input" id="forgotOtpCode" placeholder="E-poçta gələn 4 rəqəmli kod" maxlength="6" />
+            <input type="password" class="form-input" id="forgotNewPass" placeholder="Yeni parol (min. 6 simvol)" />
+            <button type="button" class="btn-primary" onclick="handleForgotResetSubmit()" style="justify-content:center;">Yeni Parolu Təsdiqlə</button>
+          </div>
+        </div>
       </div>
 
       <!-- TAB 2: 100% Free 4-Digit Email Verification Code Login -->
@@ -1936,3 +1986,205 @@ function closeModal(id) {
 }
 
 window.addEventListener("DOMContentLoaded", initApp);
+// ============================================================
+// PRODUCTION HELPERS: ESCAPE CLOSE, SHARE URL, PASSWORD RESET,
+// PROFILE EDIT, MY LISTINGS EDIT/DELETE, FOOTER INFO MODAL
+// ============================================================
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    ["liveDetailModal", "postAdModal", "authModal", "editListingModal", "infoModal"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.classList.contains("open")) closeModal(id);
+    });
+  }
+});
+
+window.addEventListener("load", () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const elanId = parseInt(params.get("elan"));
+    if (elanId) {
+      setTimeout(() => {
+        if (state.listings.some(c => c.id === elanId)) openCarModal(elanId);
+      }, 600);
+    }
+  } catch (e) {}
+});
+
+function shareListing(carId) {
+  const url = `${window.location.origin}/?elan=${carId}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast("Elan linki kopyalandı: " + url, "success");
+    }).catch(() => showToast(url, "info"));
+  } else {
+    showToast(url, "info");
+  }
+}
+
+let _forgotOtpSession = { email: "", code: "" };
+function toggleForgotBox(show) {
+  const main = document.getElementById("loginMainForm");
+  const box = document.getElementById("forgotPassBox");
+  if (main) main.style.display = show ? "none" : "flex";
+  if (box) box.style.display = show ? "flex" : "none";
+}
+
+async function handleForgotSendOtp() {
+  const email = (document.getElementById("forgotEmail").value || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) return showToast("Düzgün e-poçt daxil edin", "error");
+  const btn = document.getElementById("btnForgotSend");
+  btn.disabled = true;
+  btn.textContent = "Göndərilir...";
+  const code = String(Math.floor(1000 + Math.random() * 9000));
+  _forgotOtpSession = { email, code };
+  try {
+    const res = await dispatchRealEmailOtp(email, code, "avtolive.az İstifadəçi");
+    if (res.ok) {
+      document.getElementById("forgotStep2").style.display = "flex";
+      showToast("4 rəqəmli bərpa kodu e-poçtunuza göndərildi.", "success");
+    } else {
+      showToast("Kod göndərilə bilmədi", "error");
+    }
+  } catch (e) {
+    showToast("Şəbəkə xətası", "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Kod Göndər";
+  }
+}
+
+async function handleForgotResetSubmit() {
+  const code = (document.getElementById("forgotOtpCode").value || "").trim();
+  const newPass = document.getElementById("forgotNewPass").value || "";
+  if (code !== _forgotOtpSession.code) return showToast("Təsdiq kodu yanlışdır", "error");
+  if (newPass.length < 6) return showToast("Yeni parol minimum 6 simvol olmalıdır", "error");
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: _forgotOtpSession.email, new_password: newPass })
+    });
+    const d = await res.json();
+    if (!res.ok) return showToast(d.error || "Xəta baş verdi", "error");
+    showToast("Parolunuz yeniləndi! Yeni parolla daxil ola bilərsiniz.", "success");
+    toggleForgotBox(false);
+    document.getElementById("loginEmail").value = _forgotOtpSession.email;
+  } catch (e) {
+    showToast("Server xətası", "error");
+  }
+}
+
+async function saveProfileChanges() {
+  const full_name = (document.getElementById("profNameInput").value || "").trim();
+  const phone = (document.getElementById("profPhoneInput").value || "").trim();
+  if (!full_name) return showToast("Ad Soyad boş ola bilməz", "error");
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/auth/profile`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
+      body: JSON.stringify({ full_name, phone })
+    });
+    const d = await res.json();
+    if (!res.ok) return showToast(d.error || "Yeniləmə alınmadı", "error");
+    state.user = d.user;
+    updateAuthHeader();
+    showToast("Profil məlumatları yeniləndi", "success");
+  } catch (e) {
+    showToast("Server xətası", "error");
+  }
+}
+
+function openEditListingModal(carId) {
+  const car = state.listings.find(c => c.id === carId);
+  if (!car) return;
+  document.getElementById("editListingBody").innerHTML = `
+    <form onsubmit="saveEditedListing(event, ${car.id})" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="font-weight:800;color:#0f172a;">${car.brand} ${car.model} (${car.year})</div>
+      <label style="font-size:0.8rem;font-weight:700;">Qiymət (AZN)</label>
+      <input type="number" class="form-input" id="editPrice" value="${car.price}" required />
+      <label style="font-size:0.8rem;font-weight:700;">Şəhər</label>
+      <input type="text" class="form-input" id="editCity" value="${car.city}" required />
+      <label style="font-size:0.8rem;font-weight:700;">Yürüş (km)</label>
+      <input type="number" class="form-input" id="editMileage" value="${car.mileage}" required />
+      <label style="font-size:0.8rem;font-weight:700;">Təsvir</label>
+      <textarea class="form-input" id="editDesc" rows="3">${getDescription(car)}</textarea>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+        <button type="button" class="btn-secondary" onclick="closeModal('editListingModal')">Ləğv et</button>
+        <button type="submit" class="btn-primary">Yadda Saxla</button>
+      </div>
+    </form>
+  `;
+  closeModal("authModal");
+  document.getElementById("editListingModal").classList.add("open");
+}
+
+async function saveEditedListing(e, carId) {
+  e.preventDefault();
+  const payload = {
+    price: parseFloat(document.getElementById("editPrice").value),
+    city: document.getElementById("editCity").value.trim(),
+    mileage: parseInt(document.getElementById("editMileage").value) || 0,
+    description: document.getElementById("editDesc").value.trim()
+  };
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/listings/${carId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (!res.ok) return showToast(d.error || "Redaktə alınmadı", "error");
+    const idx = state.listings.findIndex(c => c.id === carId);
+    if (idx !== -1) state.listings[idx] = d.listing;
+    closeModal("editListingModal");
+    renderAll();
+    showToast("Elan yeniləndi", "success");
+  } catch (err) {
+    showToast("Server xətası", "error");
+  }
+}
+
+async function deleteMyListing(carId) {
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/listings/${carId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${state.token}` }
+    });
+    const d = await res.json();
+    if (!res.ok) return showToast(d.error || "Silinə bilmədi", "error");
+    state.listings = state.listings.filter(c => c.id !== carId);
+    renderAll();
+    openAuthModal();
+    showToast("Elan silindi", "success");
+  } catch (err) {
+    showToast("Server xətası", "error");
+  }
+}
+
+function openInfoModal(topic) {
+  const titleEl = document.getElementById("infoModalTitle");
+  const bodyEl = document.getElementById("infoModalBody");
+  const pages = {
+    about: {
+      t: "avtolive.az Haqqında",
+      b: "<p><strong>avtolive.az</strong> — Azərbaycanın ilk standart foto elanlar və real vaxtlı canlı avtomobil təqdimat platformasıdır.</p><p style='margin-top:10px;'>Platformada 147 marka və 1600+ model üzrə avtomobil alqı-satqısı, rəsmi avtosalon vitrinləri və satıcı ilə birbaşa canlı video/çat əlaqəsi mövcuddur.</p>"
+    },
+    rules: {
+      t: "İstifadə Qaydaları",
+      b: "<p>1. Hər bir e-poçt ünvanı və telefon nömrəsi ilə yalnız bir şəxsi hesab açıla bilər.</p><p style='margin-top:8px;'>2. Elanlarda avtomobilin real göstəriciləri, yürüşü və aktual qiyməti qeyd olunmalıdır.</p><p style='margin-top:8px;'>3. Təkrar və ya saxta elanlar moderatorlar tərəfindən silinir.</p>"
+    },
+    privacy: {
+      t: "Məxfilik Siyasəti",
+      b: "<p>İstifadəçilərin e-poçt ünvanları və şifrələri təhlükəsiz şifrələmə (SHA-256) ilə Cloudflare D1 SQL verilənlər bazasında qorunur.</p><p style='margin-top:8px;'>Əlaqə nömrəniz yalnız dərc etdiyiniz elanlarda alıcıların sizinlə əlaqə saxlaması üçün göstərilir.</p>"
+    },
+    contact: {
+      t: "Əlaqə və Dəstək",
+      b: "<p><strong>Qaynar xətt:</strong> *8899 (Hər gün 09:00 – 21:00)</p><p style='margin-top:8px;'><strong>Ünvan:</strong> Bakı şəhəri, Azərbaycan</p><p style='margin-top:8px;'><strong>E-poçt:</strong> support@avtolive.az</p>"
+    }
+  };
+  const p = pages[topic] || pages.about;
+  titleEl.textContent = p.t;
+  bodyEl.innerHTML = p.b;
+  document.getElementById("infoModal").classList.add("open");
+}

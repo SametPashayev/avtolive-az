@@ -1836,3 +1836,80 @@ body {
 .live-dot-white {
   background: #ffffff !important;
 }
+/* ============================================================
+   PRODUCTION CONTRAST & MOBILE HEADER POLISH (v15)
+   ============================================================ */
+.results-meta,
+.results-meta * {
+  color: #334155 !important;
+}
+#resultsCount {
+  color: #2563eb !important;
+}
+.chip-toggle {
+  color: #334155 !important;
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+.chip-toggle:hover,
+.chip-toggle.active {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+}
+.hero-live-seller {
+  color: #e2e8f0 !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+.salon-card p,
+.salon-meta {
+  color: #475569 !important;
+}
+.live-chat-pane {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+.nav-links {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-links::-webkit-scrollbar {
+  display: none;
+}
+.footer-links {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.footer-link-btn {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 0;
+  transition: color 0.2s ease;
+}
+.footer-link-btn:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+@media (max-width: 768px) {
+  .top-promo-bar {
+    padding: 5px 12px !important;
+    font-size: 0.72rem !important;
+  }
+  .top-promo-right {
+    display: none !important;
+  }
+  .navbar-inner {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    gap: 8px !important;
+  }
+  .brand-logo img {
+    height: 36px !important;
+  }
+}

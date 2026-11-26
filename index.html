@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261127_v14" />
+  <link rel="stylesheet" href="./styles.css?v=20261127_v15" />
 </head>
 <body>
 
@@ -132,7 +132,7 @@
   <!-- Sticky Navigation Bar -->
   <header class="navbar">
     <div class="brand-logo" onclick="switchTab('all')">
-      <img src="./logo.svg?v=20261127_v14" alt="avtolive.az logo" />
+      <img src="./logo.svg?v=20261127_v15" alt="avtolive.az logo" />
     </div>
 
     <nav class="nav-links">
@@ -759,6 +759,29 @@
     </div>
   </div>
 
+
+  <!-- MODAL 4: EDIT LISTING -->
+  <div class="modal-backdrop" id="editListingModal">
+    <div class="modal-window" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 style="font-size:1.05rem;font-weight:800;">Elanı Redaktə Et</h3>
+        <button class="close-btn" onclick="closeModal('editListingModal')">✕</button>
+      </div>
+      <div style="padding:22px;" id="editListingBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: PLATFORM INFO (FOOTER PAGES) -->
+  <div class="modal-backdrop" id="infoModal">
+    <div class="modal-window" style="max-width:600px;">
+      <div class="modal-header">
+        <h3 style="font-size:1.05rem;font-weight:800;" id="infoModalTitle">Məlumat</h3>
+        <button class="close-btn" onclick="closeModal('infoModal')">✕</button>
+      </div>
+      <div style="padding:24px;color:#334155;font-size:0.92rem;line-height:1.7;" id="infoModalBody"></div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -766,24 +789,23 @@
   <footer class="footer">
     <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
       <div>
-        <img src="./logo.svg?v=20261127_v14" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
+        <img src="./logo.svg?v=20261127_v15" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
         <p style="color:var(--text-muted);font-size:0.84rem;">
           © 2026 avtolive.az — Standart Avtomobil Elanları və Canlı Yayım Platforması.
         </p>
       </div>
-      <div style="display:flex;gap:16px;color:var(--text-muted);font-size:0.84rem;">
-        <span>147 Marka & 1600+ Model</span>
-        <span>•</span>
-        <span>AZ / TR / RU</span>
-        <span>•</span>
-        <span>Standart Qalereya + Canlı Vitrin</span>
+      <div class="footer-links">
+        <button type="button" class="footer-link-btn" onclick="openInfoModal('about')">Haqqımızda</button>
+        <button type="button" class="footer-link-btn" onclick="openInfoModal('rules')">İstifadə Qaydaları</button>
+        <button type="button" class="footer-link-btn" onclick="openInfoModal('privacy')">Məxfilik Siyasəti</button>
+        <button type="button" class="footer-link-btn" onclick="openInfoModal('contact')">Əlaqə (*8899)</button>
       </div>
     </div>
   </footer>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="./seed_data.js?v=20261127_v14"></script>
-  <script src="./brands_models.js?v=20261127_v14"></script>
-  <script src="./app.js?v=20261127_v14"></script>
+  <script src="./seed_data.js?v=20261127_v15"></script>
+  <script src="./brands_models.js?v=20261127_v15"></script>
+  <script src="./app.js?v=20261127_v15"></script>
 </body>
 </html>
