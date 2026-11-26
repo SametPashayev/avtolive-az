@@ -163,6 +163,24 @@ export async function onRequest(context) {
       return jsonResp({ users: results || [] });
     }
 
+    if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
+      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
+      if (existing.user_id !== user.id) {
+        return jsonResp({ error: "Yalnız öz elanınızda canlı yayım aça bilərsiniz" }, 403);
+      }
+      const newLive = data.is_live ? 1 : 0;
+      const newViewers = newLive ? Math.max(1, existing.live_viewers || 1) : 0;
+      const newTitle = newLive ? (existing.live_title || `CANLI: ${existing.brand} ${existing.model} (${existing.year})`) : existing.live_title;
+      await db.prepare("UPDATE listings SET is_live = ?, live_viewers = ?, live_title = ? WHERE id = ?")
+        .bind(newLive, newViewers, newTitle, listingId).run();
+      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      return jsonResp({ listing: parseListingRow(updated) });
+    }
+
     if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
       const listingId = parseInt(path.split("/")[3]) || 0;
       const { results } = await db.prepare("SELECT * FROM live_messages WHERE listing_id = ? ORDER BY id ASC").bind(listingId).all();
@@ -309,9 +327,12 @@ export async function onRequest(context) {
 
     if (path === "/api/listings") {
       const user = await getCurrentUser(db, request);
-      const userId = user ? user.id : 1;
-      const seller_name = data.seller_name || (user ? user.full_name : "AvtoLive Satıcı");
-      const seller_phone = data.seller_phone || (user ? user.phone : "+994 50 777 88 99");
+      if (!user) {
+        return jsonResp({ error: "Elan paylaşmaq üçün əvvəlcə hesabınıza daxil olun" }, 401);
+      }
+      const userId = user.id;
+      const seller_name = user.full_name || data.seller_name || "AvtoLive İstifadəçi";
+      const seller_phone = user.phone || data.seller_phone || "+994 50 000 00 00";
       const brand = data.brand || "BMW";
       const model = data.model || "530e";
       const year = parseInt(data.year) || 2024;
@@ -355,6 +376,24 @@ export async function onRequest(context) {
 
       const row = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(res.meta.last_row_id).first();
       return jsonResp({ listing: parseListingRow(row) }, 201);
+    }
+
+    if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
+      const listingId = parseInt(path.split("/")[3]) || 0;
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
+      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
+      if (existing.user_id !== user.id) {
+        return jsonResp({ error: "Yalnız öz elanınızda canlı yayım aça bilərsiniz" }, 403);
+      }
+      const newLive = data.is_live ? 1 : 0;
+      const newViewers = newLive ? Math.max(1, existing.live_viewers || 1) : 0;
+      const newTitle = newLive ? (existing.live_title || `CANLI: ${existing.brand} ${existing.model} (${existing.year})`) : existing.live_title;
+      await db.prepare("UPDATE listings SET is_live = ?, live_viewers = ?, live_title = ? WHERE id = ?")
+        .bind(newLive, newViewers, newTitle, listingId).run();
+      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
+      return jsonResp({ listing: parseListingRow(updated) });
     }
 
     if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
@@ -434,4 +473,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-  }
+        }
