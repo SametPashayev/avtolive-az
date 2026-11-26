@@ -665,7 +665,7 @@ function renderFeaturedHeroLive() {
 
   const dict = I18N[state.lang];
   stage.innerHTML = `
-    <video class="hero-live-video" src="${featured.live_stream_url || 'https://assets.mixkit.co/videos/preview/mixkit-sports-car-driving-in-the-city-at-night-41569-large.mp4'}" autoplay muted loop playsinline poster="${featured.images[0]}"></video>
+    ${featured.live_stream_url && !featured.live_stream_url.includes("mixkit.co") ? `<video class="hero-live-video" src="${featured.live_stream_url}" autoplay muted loop playsinline poster="${featured.images[0]}"></video>` : `<img class="hero-live-video" src="${featured.images[0]}" alt="${featured.brand} ${featured.model}" />`}
     <div class="hero-live-overlay">
       <div class="live-top-bar">
         <span class="live-pill-mini" style="font-size:0.76rem;padding:5px 12px;">
