@@ -124,10 +124,25 @@ async function ensureSchema(db) {
   `).run();
 }
 
-function parseRequestRow(r) {
+function parseRequestRow(r, currentUserId = 0, acceptedMasterId = 0) {
   if (!r) return null;
   const copy = { ...r };
   try { copy.images = typeof r.images === "string" ? JSON.parse(r.images) : (r.images || []); } catch (e) { copy.images = []; }
+  const canSeeCustomerPhone = (currentUserId && r.user_id === currentUserId) ||
+    (r.status !== "open" && currentUserId && acceptedMasterId && currentUserId === acceptedMasterId);
+  if (!canSeeCustomerPhone) {
+    copy.customer_phone = "+994 •• ••• •• ••";
+  }
+  return copy;
+}
+
+function formatBidRow(b, currentUserId = 0) {
+  if (!b) return null;
+  const copy = { ...b };
+  const canSeeMasterPhone = b.status === "accepted" || (currentUserId && b.master_id === currentUserId);
+  if (!canSeeMasterPhone) {
+    copy.master_phone = "+994 •• ••• •• ••";
+  }
   return copy;
 }
 
@@ -171,16 +186,22 @@ export async function onRequest(context) {
 
   if (request.method === "GET") {
     if (path === "/api/init") {
-      const { results: reqRows } = await db.prepare("SELECT * FROM service_requests ORDER BY id DESC").all();
-      const requests = (reqRows || []).map(parseRequestRow);
+      const user = await getCurrentUser(db, request);
+      const uid = user ? user.id : 0;
       const { results: bidRows } = await db.prepare("SELECT * FROM service_bids ORDER BY price ASC, id ASC").all();
+      const acceptedByReq = {};
+      (bidRows || []).forEach(b => {
+        if (b.status === "accepted") acceptedByReq[b.request_id] = b.master_id;
+      });
+      const { results: reqRows } = await db.prepare("SELECT * FROM service_requests ORDER BY id DESC").all();
+      const requests = (reqRows || []).map(r => parseRequestRow(r, uid, acceptedByReq[r.id] || 0));
+      const bids = (bidRows || []).map(b => formatBidRow(b, uid));
       const { results: masterRows } = await db.prepare(`
         SELECT ${USER_COLS} FROM users
         WHERE role = 'master' OR (specialty IS NOT NULL AND specialty != '') OR (salon_name IS NOT NULL AND salon_name != '')
         ORDER BY is_pro DESC, rating DESC, jobs_done DESC, id DESC
       `).all();
-      const user = await getCurrentUser(db, request);
-      return jsonResp({ requests, bids: bidRows || [], masters: masterRows || [], user });
+      return jsonResp({ requests, bids, masters: masterRows || [], user });
     }
 
     if (path === "/api/users") {
@@ -190,10 +211,15 @@ export async function onRequest(context) {
 
     if (path.startsWith("/api/requests/")) {
       const reqId = parseInt(path.split("/")[3]) || 0;
+      const user = await getCurrentUser(db, request);
+      const uid = user ? user.id : 0;
       const row = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
       if (!row) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
-      const { results: bids } = await db.prepare("SELECT * FROM service_bids WHERE request_id = ? ORDER BY price ASC, id ASC").bind(reqId).all();
-      return jsonResp({ request: parseRequestRow(row), bids: bids || [] });
+      const { results: rawBids } = await db.prepare("SELECT * FROM service_bids WHERE request_id = ? ORDER BY price ASC, id ASC").bind(reqId).all();
+      const acceptedBid = (rawBids || []).find(b => b.status === "accepted");
+      const acceptedMasterId = acceptedBid ? acceptedBid.master_id : 0;
+      const bids = (rawBids || []).map(b => formatBidRow(b, uid));
+      return jsonResp({ request: parseRequestRow(row, uid, acceptedMasterId), bids });
     }
   }
 
@@ -363,17 +389,15 @@ export async function onRequest(context) {
       const price = parseFloat(data.price) || 0;
       const eta = (data.eta || "1 saata gəlirəm").trim();
       const warranty = (data.warranty || "Zəmanət verilir").trim();
-      const comment = (data.comment || "Peşəkar xidmət göstərilir.").trim();
+      const rawComment = (data.comment || "Peşəkar xidmət göstərilir.").trim();
+      const comment = rawComment.replace(/\+?\d[\d\s\-()]{6,}\d/g, "[nömrə təklif qəbul edildikdə açılır]");
       if (price <= 0) return jsonResp({ error: "Düzgün qiymət (AZN) daxil edin" }, 400);
 
-      // Deduct 2 AZN lead fee unless master is PRO
-      const fee = user.is_pro ? 0 : 2.0;
-      if (fee > 0 && (user.balance || 0) < fee) {
-        return jsonResp({ error: "Təklif göndərmək üçün balansınızda ən azı 2 ₼ olmalıdır (Tariflər bölməsinə baxın)" }, 402);
+      // Zero-Risk Rule: 0 AZN deducted when sending a bid! Only check that master has >= 2 AZN (or PRO) ready if selected.
+      if (!user.is_pro && (user.balance || 0) < 2.0) {
+        return jsonResp({ error: "Təklif göndərmək pulsuzdur (0 ₼), lakin təklifiniz qəbul edilərsə 2 ₼ komissiya üçün balansınızda ən azı 2 ₼ olmalıdır." }, 402);
       }
-      if (fee > 0) {
-        await db.prepare("UPDATE users SET balance = ROUND(balance - ?, 2), role = 'master' WHERE id = ?").bind(fee, user.id).run();
-      }
+      await db.prepare("UPDATE users SET role = 'master' WHERE id = ?").bind(user.id).run();
 
       const now = new Date().toISOString();
       const spec = user.specialty || user.salon_name || "Peşəkar Usta";
@@ -390,7 +414,7 @@ export async function onRequest(context) {
       await db.prepare("UPDATE service_requests SET offers_count = offers_count + 1 WHERE id = ?").bind(reqId).run();
       const bid = await db.prepare("SELECT * FROM service_bids WHERE id = ?").bind(res.meta.last_row_id).first();
       const updatedUser = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
-      return jsonResp({ bid, user: updatedUser }, 201);
+      return jsonResp({ bid: formatBidRow(bid, user.id), user: updatedUser }, 201);
     }
 
     if (path.startsWith("/api/requests/") && path.endsWith("/accept-bid")) {
@@ -400,17 +424,24 @@ export async function onRequest(context) {
       const sReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
       if (!sReq) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
       if (sReq.user_id !== user.id) return jsonResp({ error: "Yalnız sorğu sahibi təklifi qəbul edə bilər" }, 403);
+      if (sReq.status !== "open") return jsonResp({ error: "Bu sorğu üzrə artıq təklif qəbul edilib" }, 400);
 
       const bidId = parseInt(data.bid_id) || 0;
       const bid = await db.prepare("SELECT * FROM service_bids WHERE id = ? AND request_id = ?").bind(bidId, reqId).first();
       if (!bid) return jsonResp({ error: "Təklif tapılmadı" }, 404);
 
+      // Deduct 2 AZN ONLY from the winning master when the customer accepts their bid!
+      const masterUser = await db.prepare("SELECT id, balance, is_pro FROM users WHERE id = ?").bind(bid.master_id).first();
+      const fee = (masterUser && masterUser.is_pro) ? 0 : 2.0;
+
       await db.prepare("UPDATE service_bids SET status = 'accepted' WHERE id = ?").bind(bidId).run();
       await db.prepare("UPDATE service_requests SET status = 'assigned', accepted_bid_id = ? WHERE id = ?").bind(bidId, reqId).run();
-      await db.prepare("UPDATE users SET jobs_done = COALESCE(jobs_done, 0) + 1 WHERE id = ?").bind(bid.master_id).run();
+      await db.prepare("UPDATE users SET balance = MAX(0, ROUND(COALESCE(balance, 0) - ?, 2)), jobs_done = COALESCE(jobs_done, 0) + 1 WHERE id = ?")
+        .bind(fee, bid.master_id).run();
 
       const updatedReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
-      return jsonResp({ request: parseRequestRow(updatedReq), accepted_bid: bid });
+      const acceptedBid = await db.prepare("SELECT * FROM service_bids WHERE id = ?").bind(bidId).first();
+      return jsonResp({ request: parseRequestRow(updatedReq, user.id, bid.master_id), accepted_bid: formatBidRow(acceptedBid, user.id) });
     }
 
     if (path.startsWith("/api/requests/") && path.endsWith("/complete")) {
@@ -498,4 +529,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-        }
+  }
