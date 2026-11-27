@@ -23,7 +23,7 @@ function iconSvg(name, cls = "sm") {
 const I18N = {
   az: {
     promo: "Standart Avtomobil Elanları və Canlı Yayım Vitrini — VIP Paketlər 55% Daha Sərfəli",
-    online_buyers: "1,480 alıcı hazırda saytdadır",
+    online_buyers: "Real vaxtlı elan platforması",
     top_login: "Giriş",
     top_register: "Qeydiyyat",
     btn_login_only: "Giriş",
@@ -90,7 +90,7 @@ const I18N = {
   },
   tr: {
     promo: "Standart Otomobil İlanları ve Canlı Yayın Vitrini — VIP Paketler %55 Daha Uygun",
-    online_buyers: "1,480 alıcı şu an sitede aktif",
+    online_buyers: "Gerçek zamanlı ilan platformu",
     top_login: "Giriş",
     top_register: "Kayıt Ol",
     btn_login_only: "Giriş",
@@ -157,7 +157,7 @@ const I18N = {
   },
   ru: {
     promo: "Стандартные объявления и витрина прямых эфиров — VIP-пакеты на 55% выгоднее",
-    online_buyers: "1,480 покупателей сейчас на сайте",
+    online_buyers: "Платформа объявлений в реальном времени",
     top_login: "Вход",
     top_register: "Регистрация",
     btn_login_only: "Вход",
@@ -529,7 +529,7 @@ function setLanguage(lang, rerender = true) {
 
   const dict = I18N[lang];
   document.getElementById("promoText").textContent = dict.promo;
-  document.getElementById("activeUsersBadge").textContent = dict.online_buyers;
+  const _ab = document.getElementById("activeUsersBadge"); if (_ab) _ab.textContent = (state.listings && state.listings.length) ? `Aktiv elanlar: ${state.listings.length}` : dict.online_buyers;
   document.getElementById("heroTitle").innerHTML = dict.hero_title;
   document.getElementById("heroSubtitle").textContent = dict.hero_subtitle;
 
@@ -1553,10 +1553,14 @@ function updateAuthUI() {
   const profileBtn = document.getElementById("userProfileBtn");
   const btnText = document.getElementById("authBtnText");
 
+  document.querySelectorAll(".top-auth-link").forEach(el => {
+    el.style.display = state.user ? "none" : "inline-flex";
+  });
+
   if (state.user) {
     if (guestBtns) guestBtns.style.display = "none";
     if (profileBtn) profileBtn.style.display = "inline-flex";
-    if (btnText) btnText.textContent = `${state.user.full_name.split(" ")[0]} (${state.user.balance} ₼)`;
+    if (btnText) btnText.textContent = `Hesabım • ${state.user.full_name.split(" ")[0]} (${state.user.balance} ₼)`;
   } else {
     if (guestBtns) guestBtns.style.display = "inline-flex";
     if (profileBtn) profileBtn.style.display = "none";
@@ -1650,10 +1654,10 @@ function openAuthModal(defaultTab = "login") {
       <!-- TAB 1: Standard Email & Password Login -->
       <div id="authPane_login" style="display:none;">
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
-          Qeydiyyatdan keçdiyiniz e-poçt ünvanı və parolunuzla daxil olun.
+          Qeydiyyatdan keçdiyiniz e-poçt ünvanı və ya telefon nömrənizlə daxil olun.
         </p>
         <form id="loginMainForm" onsubmit="handleLogin(event)" style="display:flex;flex-direction:column;gap:12px;">
-          <input type="email" class="form-input" id="loginEmail" placeholder="E-poçt ünvanınız (məs: adiniz@gmail.com)" required />
+          <input type="text" class="form-input" id="loginEmail" placeholder="E-poçt ünvanınız və ya +994 telefon nömrəniz" required />
           <input type="password" class="form-input" id="loginPass" placeholder="Parolunuz" required />
           <div style="text-align:right;">
             <button type="button" onclick="toggleForgotBox(true)" style="background:none;border:none;color:#2563eb;font-size:0.8rem;font-weight:600;cursor:pointer;">Şifrəni unutdum?</button>
@@ -1708,7 +1712,7 @@ function openAuthModal(defaultTab = "login") {
           <input type="text" class="form-input" id="regName" placeholder="Ad və Soyad (və ya Avtosalon Adı) *" required />
           <input type="email" class="form-input" id="regEmail" placeholder="E-poçt ünvanınız (Təsdiq kodu bura gələcək) *" oninput="scheduleAvailabilityCheck()" required />
           <div class="field-hint" id="regEmailHint"></div>
-          <input type="text" class="form-input" id="regPhone" value="+994 50 " placeholder="Əlaqə nömrəsi (Elanlarda zəng üçün) *" oninput="scheduleAvailabilityCheck()" required />
+          <input type="text" class="form-input" id="regPhone" value="+994 " placeholder="+994" oninput="scheduleAvailabilityCheck()" required />
           <div class="field-hint" id="regPhoneHint"></div>
           <input type="password" class="form-input" id="regPass" placeholder="Parol təyin edin (min. 6 simvol) *" required />
           <button type="submit" class="btn-primary" id="btnRegSendCode" style="justify-content:center;">E-poçta Təsdiq Kodu Göndər</button>
@@ -1965,7 +1969,7 @@ async function loginWithCredentials(email, password) {
     const res = await fetch(D1_API_BASE + "/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, identifier: email, password })
     });
     if (res.ok) {
       const data = await res.json();
@@ -2175,7 +2179,7 @@ async function saveProfileChanges() {
     const d = await res.json();
     if (!res.ok) return showToast(d.error || "Yeniləmə alınmadı", "error");
     state.user = d.user;
-    updateAuthHeader();
+    updateAuthUI();
     showToast("Profil məlumatları yeniləndi", "success");
   } catch (e) {
     showToast("Server xətası", "error");
