@@ -268,9 +268,9 @@ function renderMastersGrid() {
             <div style="font-size:0.74rem;color:#64748b;">${m.jobs_done || 0} tamamlanmış iş</div>
           </div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;font-size:0.82rem;">
-          <span style="color:#475569;">📍 Bakı, Azərbaycan</span>
-          <a href="tel:${m.phone}" class="btn-secondary" style="text-decoration:none;padding:6px 12px;font-size:0.78rem;">📞 ${m.phone}</a>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #f1f5f9;font-size:0.82rem;gap:8px;flex-wrap:wrap;">
+          <span style="color:#475569;">🔒 +994 •• ••• •• ••</span>
+          <button type="button" class="btn-secondary" onclick="openNewRequestModal()" style="padding:5px 10px;font-size:0.76rem;">Sorğu Yarat & Təklif Al</button>
         </div>
       </div>
     `;
@@ -371,7 +371,8 @@ async function openRequestDetail(reqId) {
   state.activeRequestId = reqId;
 
   try {
-    const res = await fetch(`${D1_API_BASE}/api/requests/${reqId}`);
+    const headers = state.token ? { "Authorization": `Bearer ${state.token}` } : {};
+    const res = await fetch(`${D1_API_BASE}/api/requests/${reqId}`, { headers });
     if (res.ok) {
       const d = await res.json();
       if (d.request) req = d.request;
@@ -430,6 +431,10 @@ async function openRequestDetail(reqId) {
             <button type="button" class="btn-secondary" onclick="deleteMyRequest(${req.id})" style="color:#dc2626;border-color:#fecaca;padding:6px 12px;font-size:0.78rem;">
               Sorğunu Sil
             </button>
+          ` : req.customer_phone.includes("••") ? `
+            <span class="badge-cat" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;" title="Müştəri təklifinizi qəbul etdikdə nömrə açılır">
+              🔒 ${req.customer_phone} (Qəbul edildikdə açılır)
+            </span>
           ` : `
             <a href="tel:${req.customer_phone}" class="btn-emerald" style="text-decoration:none;padding:8px 14px;font-size:0.82rem;">
               📞 ${req.customer_phone}
@@ -462,8 +467,14 @@ async function openRequestDetail(reqId) {
               <p style="font-size:0.83rem;color:#334155;margin-bottom:8px;">${b.comment}</p>
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:0.76rem;">
                 <span style="color:#059669;font-weight:700;">🛡 ${b.warranty}</span>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <a href="tel:${b.master_phone}" class="btn-secondary" style="text-decoration:none;padding:4px 10px;font-size:0.75rem;">📞 ${b.master_phone}</a>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                  ${b.master_phone.includes("••") ? `
+                    <span class="badge-cat" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;" title="Təklifi qəbul etdikdə ustanın nömrəsi açılır">
+                      🔒 ${b.master_phone}
+                    </span>
+                  ` : `
+                    <a href="tel:${b.master_phone}" class="btn-secondary" style="text-decoration:none;padding:4px 10px;font-size:0.75rem;">📞 ${b.master_phone}</a>
+                  `}
                   ${isOwner && req.status === "open" ? `
                     <button type="button" class="btn-emerald" onclick="acceptMasterBid(${req.id}, ${b.id})" style="padding:5px 11px;font-size:0.76rem;">
                       Təklifi Qəbul Et
@@ -502,7 +513,7 @@ async function openRequestDetail(reqId) {
           <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;">
             <h4 style="font-size:0.96rem;font-weight:800;color:#1e3a8a;margin-bottom:4px;">Usta Kimi Qiymət Təklifi Göndər</h4>
             <p style="font-size:0.77rem;color:#475569;margin-bottom:10px;">
-              ${state.user?.is_pro ? "PRO Usta hesabınız aktivdir — Təklif göndərmək 0 ₼!" : "Təklif göndərmək balansınızdan 2 ₼ çıxır (Yeni hesablarda 10 ₼ bonus var)."}
+              ${state.user?.is_pro ? "PRO Usta hesabınız aktivdir — Təklif göndərmək və qəbul edilmək 0 ₼!" : "Təklif göndərmək 0 ₼ (Pulsuzdur)! Yalnız müştəri sizin təklifinizi qəbul etdikdə balansınızdan 2 ₼ çıxılır."}
             </p>
             <form onsubmit="submitMasterBid(event, ${req.id})" style="display:flex;flex-direction:column;gap:10px;">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
