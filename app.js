@@ -507,10 +507,12 @@ async function initApp() {
     if (!res.ok) throw new Error("Static fallback");
     const data = await res.json();
     state.listings = Array.isArray(data.db_listings) ? data.db_listings : [];
+    state.liveStreams = Array.isArray(data.live_streams) ? data.live_streams : [];
     state.salons = Array.isArray(data.salons) ? data.salons : [];
     state.user = data.user || JSON.parse(localStorage.getItem("avtolive_user") || "null");
   } catch (e) {
     state.listings = [];
+    state.liveStreams = [];
     state.salons = [];
     state.user = JSON.parse(localStorage.getItem("avtolive_user") || "null");
   }
@@ -650,50 +652,72 @@ function renderAll() {
 
 function renderFeaturedHeroLive() {
   const stage = document.getElementById("featuredLiveStage");
-  const liveCars = state.listings.filter(c => c.is_live === 1);
-  document.getElementById("liveCountNav").textContent = liveCars.length;
+  const liveList = state.liveStreams || [];
+  document.getElementById("liveCountNav").textContent = liveList.length;
 
-  const featured = liveCars[0] || state.listings[0];
-  if (!featured) {
+  const activeStream = liveList[0];
+  if (activeStream) {
+    const dict = I18N[state.lang];
     stage.innerHTML = `
-      <div class="hero-live-overlay" style="background:linear-gradient(145deg,#0f172a,#1e3a8a);justify-content:center;align-items:center;text-align:center;gap:14px;">
-        <span class="live-pill-mini" style="font-size:0.78rem;padding:5px 14px;">${iconSvg("broadcast")} CANLI VİTRİN</span>
-        <h3 style="font-size:1.35rem;font-weight:900;color:#fff;">İlk Avtomobil Elanını Siz Paylaşın!</h3>
-        <p style="font-size:0.88rem;color:#cbd5e1;max-width:340px;">Qeydiyyatdan keçin və avtomobilinizi standart qalereya və ya canlı yayımla alıcılara təqdim edin.</p>
-        <button class="btn-primary" onclick="openPostModal(true)">${iconSvg("plus")} Yeni Elan Yerləşdir</button>
+      <img class="hero-live-video" src="${activeStream.cover_image || 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80'}" alt="${activeStream.title}" />
+      <div class="hero-live-overlay">
+        <div class="live-top-bar">
+          <span class="live-pill-mini" style="font-size:0.76rem;padding:5px 12px;">
+            ${iconSvg("broadcast")} ${activeStream.is_salon ? 'AVTOSALON CANLI' : 'CANLI YAYIM / LIVE'}
+          </span>
+          <span class="viewer-count-pill">
+            ${iconSvg("eye")} ${activeStream.viewers || 1} izləyici
+          </span>
+        </div>
+        <div>
+          <div class="hero-live-seller" style="font-size:0.81rem;color:#e2e8f0;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+            ${iconSvg("salon")} ${activeStream.salon_name || activeStream.seller_name}
+          </div>
+          <h3 style="font-size:1.35rem;font-weight:900;margin-bottom:6px;color:#fff;">
+            ${activeStream.title}
+          </h3>
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button class="btn-primary btn-live-red" onclick="openShowroomLiveModal(${activeStream.id})">
+              ${iconSvg("broadcast")} ${dict.watch_live_btn}
+            </button>
+          </div>
+        </div>
       </div>
     `;
     return;
   }
 
-  const dict = I18N[state.lang];
+  const featured = state.listings[0];
+  if (!featured) {
+    stage.innerHTML = `
+      <div class="hero-live-overlay" style="background:linear-gradient(145deg,#0f172a,#1e3a8a);justify-content:center;align-items:center;text-align:center;gap:14px;">
+        <span class="live-pill-mini" style="font-size:0.78rem;padding:5px 14px;">${iconSvg("broadcast")} AVTOSALON CANLI VİTRİN</span>
+        <h3 style="font-size:1.35rem;font-weight:900;color:#fff;">Avtosalonunuzu və ya Avtomobillərinizi Canlı Göstərin!</h3>
+        <p style="font-size:0.88rem;color:#cbd5e1;max-width:340px;">Avtosalonlar və qeydiyyatlı üzvlər öz hesablarından canlı vitrin yayımı aça bilərlər.</p>
+        <button class="btn-primary btn-live-red" onclick="openShowroomModePicker()">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
+      </div>
+    `;
+    return;
+  }
+
   stage.innerHTML = `
-    ${featured.live_stream_url && !featured.live_stream_url.includes("mixkit.co") ? `<video class="hero-live-video" src="${featured.live_stream_url}" autoplay muted loop playsinline poster="${featured.images[0]}"></video>` : `<img class="hero-live-video" src="${featured.images[0]}" alt="${featured.brand} ${featured.model}" />`}
+    <img class="hero-live-video" src="${(featured.images && featured.images[0]) || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80'}" alt="${featured.brand} ${featured.model}" />
     <div class="hero-live-overlay">
       <div class="live-top-bar">
-        <span class="live-pill-mini" style="font-size:0.76rem;padding:5px 12px;">
-          ${iconSvg("broadcast")}
-          ${featured.is_live ? 'CANLI YAYIM / LIVE' : 'VIP VİTRİN'}
-        </span>
-        <span class="viewer-count-pill">
-          ${iconSvg("eye")} ${featured.live_viewers || 0} izləyici
+        <span class="badge-tier badge-vip" style="position:static;padding:5px 12px;">
+          ${iconSvg("crown")} VIP VİTRİN
         </span>
       </div>
-
       <div>
         <div class="hero-live-seller" style="font-size:0.81rem;color:#e2e8f0;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
           ${iconSvg("salon")} ${featured.seller_name} • ${featured.city}
         </div>
-        <h3 style="font-size:1.4rem;font-weight:900;margin-bottom:6px;">
+        <h3 style="font-size:1.35rem;font-weight:900;margin-bottom:6px;color:#fff;">
           ${featured.brand} ${featured.model} (${featured.year}) — <span style="white-space:nowrap;">${formatPrice(featured.price)}</span>
         </h3>
-        <p style="font-size:0.85rem;color:#cbd5e1;margin-bottom:14px;">
-          ${featured.live_title || getDescription(featured).slice(0, 95)}
-        </p>
-        <div style="display:flex;gap:10px;">
-          <button class="btn-primary btn-live-red" onclick="openCarDetail(${featured.id})">
-            ${iconSvg("broadcast")} ${dict.watch_live_btn}
-          </button>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="btn-primary" onclick="openCarDetail(${featured.id})">Elana Bax</button>
+          <button class="btn-primary btn-live-red" onclick="openShowroomModePicker()">${iconSvg("broadcast")} Canlı Yayım Aç</button>
         </div>
       </div>
     </div>
@@ -702,108 +726,45 @@ function renderFeaturedHeroLive() {
 
 function renderLiveStrip() {
   const grid = document.getElementById("liveStripGrid");
-  const liveCars = state.listings.filter(c => c.is_live === 1);
+  const liveList = state.liveStreams || [];
   const dict = I18N[state.lang];
 
-  if (!liveCars.length) {
+  if (!liveList.length) {
     grid.innerHTML = `
       <div style="grid-column:1/-1;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;text-align:center;">
-        <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:6px;">Hazırda aktiv canlı yayım yoxdur</div>
-        <div style="font-size:0.86rem;color:#64748b;margin-bottom:14px;">Öz avtomobiliniz üçün ilk canlı yayımı elə indi başladın.</div>
-        <button class="btn-primary btn-live-red" onclick="openPostModal(true)">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
+        <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:6px;">Hazırda aktiv avtosalon və ya üzv canlı yayımı yoxdur</div>
+        <div style="font-size:0.86rem;color:#64748b;margin-bottom:14px;">Avtosalonlar, qalereyalar və hesab sahibləri öz hesablarından canlı yayım başlada bilərlər.</div>
+        <button class="btn-primary btn-live-red" onclick="openShowroomModePicker()">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
       </div>
     `;
     return;
   }
-  grid.innerHTML = liveCars.map(car => `
-    <div class="live-card" onclick="openCarDetail(${car.id})">
+
+  grid.innerHTML = liveList.map(st => `
+    <div class="live-card" onclick="openShowroomLiveModal(${st.id})">
       <div class="live-card-media">
-        <img src="${car.images[0]}" alt="${car.brand} ${car.model}" />
+        <img src="${st.cover_image || 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80'}" alt="${st.title}" />
         <div class="live-ring-badge">
-          ${iconSvg("broadcast")} LIVE
+          ${iconSvg("broadcast")} ${st.is_salon ? 'SALON LIVE' : 'LIVE'}
         </div>
         <div class="live-viewers-tag">
-          ${iconSvg("eye")} ${car.live_viewers}
+          ${iconSvg("eye")} ${st.viewers || 1}
         </div>
       </div>
       <div class="live-card-body">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-          <span style="font-size:1.18rem;font-weight:900;color:#2563eb;">${formatPrice(car.price)}</span>
-          <span style="font-size:0.78rem;color:#2563eb;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-            ${iconSvg("pin")} ${car.city}
-          </span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:6px;">
+          <span style="font-weight:800;font-size:0.98rem;color:#0f172a;">${st.title}</span>
+          ${st.is_salon ? `<span class="owner-pill">Avtosalon / Qalereya</span>` : ''}
         </div>
-        <div style="font-weight:800;font-size:1rem;margin-bottom:4px;">${car.brand} ${car.model} (${car.year})</div>
-        <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${car.live_title || (car.engine_volume + ' L • ' + car.mileage + ' km')}
+        <div style="font-size:0.82rem;color:#475569;margin-bottom:12px;">
+          Yayıncı: <strong>${st.salon_name || st.seller_name}</strong> • ${st.seller_phone}
         </div>
-        <button class="btn-primary" style="width:100%;justify-content:center;padding:8px 12px;font-size:0.83rem;">
+        <button class="btn-primary btn-live-red" style="width:100%;justify-content:center;font-size:0.84rem;">
           ${iconSvg("broadcast")} ${dict.watch_live_btn}
         </button>
       </div>
     </div>
   `).join("");
-}
-
-function applyFilters() {
-  const brand = document.getElementById("fBrand").value;
-  const model = document.getElementById("fModel").value;
-  const city = document.getElementById("fCity").value;
-  const body = document.getElementById("fBody").value;
-  const fuel = document.getElementById("fFuel").value;
-  const gear = document.getElementById("fGear").value;
-  const priceMin = parseFloat(document.getElementById("fPriceMin").value) || 0;
-  const priceMax = parseFloat(document.getElementById("fPriceMax").value) || Infinity;
-  const yearMin = parseInt(document.getElementById("fYearMin").value) || 0;
-  const yearMax = parseInt(document.getElementById("fYearMax").value) || Infinity;
-  const mileageMax = parseInt(document.getElementById("fMileageMax").value) || Infinity;
-  const search = document.getElementById("fSearch").value.trim().toLowerCase();
-  const sort = document.getElementById("fSort").value;
-
-  let filtered = state.listings.filter(item => {
-    if (state.tab === "favorites" && !state.favorites.includes(item.id)) return false;
-    if (state.condition === "new" && !item.is_new && item.mileage > 0) return false;
-    if (state.condition === "used" && (item.is_new || item.mileage === 0)) return false;
-
-    if (brand && item.brand !== brand) return false;
-    if (model && item.model !== model) return false;
-    if (city && item.city !== city) return false;
-    if (body && item.body_type !== body) return false;
-    if (fuel && item.fuel_type !== fuel) return false;
-    if (gear && item.transmission !== gear) return false;
-
-    if (item.price < priceMin || item.price > priceMax) return false;
-    if (item.year < yearMin || item.year > yearMax) return false;
-    if (item.mileage > mileageMax) return false;
-
-    if (state.chips.live && !item.is_live) return false;
-    if (state.chips.credit && !item.credit) return false;
-    if (state.chips.barter && !item.barter) return false;
-    if (state.chips.vip && item.tier !== "vip") return false;
-
-    if (search) {
-      const hay = `${item.brand} ${item.model} ${item.city} ${item.vin_code} ${item.description_az} ${item.description_tr} ${item.seller_name}`.toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-
-    return true;
-  });
-
-  if (sort === "newest") {
-    filtered.sort((a, b) => b.id - a.id);
-  } else if (sort === "price_asc") {
-    filtered.sort((a, b) => a.price - b.price);
-  } else if (sort === "price_desc") {
-    filtered.sort((a, b) => b.price - a.price);
-  } else if (sort === "year_desc") {
-    filtered.sort((a, b) => b.year - a.year);
-  } else {
-    const tierOrder = { vip: 1, premium: 2, forward: 3, standard: 4 };
-    filtered.sort((a, b) => (b.is_live - a.is_live) || ((tierOrder[a.tier] || 4) - (tierOrder[b.tier] || 4)) || (b.id - a.id));
-  }
-
-  document.getElementById("resultsCount").textContent = filtered.length;
-  renderCarsGrid(filtered);
 }
 
 function renderCarsGrid(cars) {
@@ -974,13 +935,8 @@ function openCarDetail(id) {
 
   document.getElementById("modalCarTitle").textContent = `${car.brand} ${car.model} (${car.year})`;
   const badge = document.getElementById("modalLiveBadge");
-  if (car.is_live) {
-    badge.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
-    badge.innerHTML = `${iconSvg("broadcast")} CANLI YAYIM (${car.live_viewers || 0} izləyici)`;
-  } else {
-    badge.style.background = "#2563eb";
-    badge.innerHTML = `${iconSvg("car")} ELAN № ${10000 + car.id}`;
-  }
+  badge.style.background = "#2563eb";
+  badge.innerHTML = `${iconSvg("car")} ELAN № ${10000 + car.id}`;
 
   const body = document.getElementById("modalBodyContent");
   _galleryPhotos = (car.images && car.images.length > 0)
@@ -997,7 +953,7 @@ function openCarDetail(id) {
     <div class="detail-breadcrumb">
       <button type="button" onclick="closeModal('liveDetailModal');switchTab('all');">Ana səhifə</button>
       <span>›</span>
-      <button type="button" onclick="filterByBrandFromDetail('${car.brand.replace(/'/g, "\'")}')">${car.brand}</button>
+      <button type="button" onclick="filterByBrandFromDetail('${car.brand.replace(/'/g, "\\'")}')">${car.brand}</button>
       <span>›</span>
       <span style="color:#0f172a;font-weight:700;">${car.model}</span>
     </div>
@@ -1015,76 +971,16 @@ function openCarDetail(id) {
     </div>
 
     <div class="detail-2col-grid">
-      <!-- LEFT COLUMN: MEDIA GALLERY / LIVE STUDIO -->
       <div>
-        <div class="detail-gallery-stage live-video-pane">
-          <div class="detail-gallery-media-box ${car.is_live ? (_liveOrientation === 'vertical' ? 'live-mode-vertical' : 'live-mode-horizontal') : ''}" id="liveMediaBox">
-            ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
-              <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
-            ` : `
-              <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" onclick="openPhotoLightbox(_galleryIndex)" style="cursor:zoom-in;" title="Tam ekran açmaq üçün klikləyin" />
-              ${_galleryPhotos.length > 1 ? `
-                <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
-                <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
-                <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
-              ` : ''}
-            `}
-            ${car.is_live ? `
-              <div class="live-hud-top">
-                <div style="display:flex;gap:6px;align-items:center;">
-                  <span class="live-ring-badge" style="position:static;padding:4px 9px;font-size:0.72rem;">LIVE</span>
-                  <span class="live-hud-pill">${iconSvg("eye")} ${car.live_viewers || 1}</span>
-                </div>
-                <div style="display:flex;gap:6px;align-items:center;">
-                  ${!isOwner ? `<button type="button" class="live-hud-btn" id="hudSoundBtn" onclick="toggleViewerAudio()">🔊 Səs</button>` : ''}
-                  <button type="button" class="live-hud-btn" onclick="toggleLiveFullscreen()">⛶</button>
-                </div>
-              </div>
-              <button type="button" class="tap-unmute-banner" id="tapToUnmuteBtn" style="display:none;" onclick="unmuteViewerStream()">🔊 Səsi Aç</button>
-              <button type="button" class="live-heart-btn" onclick="spawnFloatingHeart()" title="Bəyən">❤️</button>
-            ` : ''}
-            <div class="pinned-live-banner" id="pinnedLiveBanner">
-              <span id="pinnedLiveText">📌 Sabit mesaj</span>
-              ${isOwner ? `<button type="button" onclick="unpinLiveMessage(${car.id})" style="background:none;border:none;color:#fff;font-weight:800;cursor:pointer;">✕</button>` : ''}
-            </div>
-            <div class="broadcaster-chat-overlay ${car.is_live ? 'with-inline-reply' : ''}" id="broadcasterChatOverlay" style="display:${car.is_live ? 'flex' : 'none'};"></div>
-            ${car.is_live ? `
-              <form class="broadcaster-inline-reply" onsubmit="sendInlineLiveReply(event, ${car.id})">
-                <input type="text" id="inlineLiveReplyInput" placeholder="${isOwner ? 'İzləyicilərə yazaraq cavab verin...' : 'Canlı yayıma şərh yazın...'}" required />
-                <button type="submit">Göndər</button>
-              </form>
+        <div class="detail-gallery-stage">
+          <div class="detail-gallery-media-box">
+            <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" onclick="openPhotoLightbox(_galleryIndex)" style="cursor:zoom-in;" title="Tam ekran açmaq üçün klikləyin" />
+            ${_galleryPhotos.length > 1 ? `
+              <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
+              <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
+              <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
             ` : ''}
           </div>
-
-          ${(isOwner || car.is_live) ? `
-            <div class="live-controls-bar" style="position:static;margin:0;border-radius:0;border-top:1px solid rgba(255,255,255,0.12);background:#0f172a;">
-              <div>
-                <div style="font-weight:800;font-size:0.86rem;color:#fff;">
-                  ${car.is_live ? (car.live_title || 'Canlı Avtomobil Təqdimatı') : 'Canlı Yayım Studiyası'}
-                </div>
-                <div style="font-size:0.75rem;color:#cbd5e1;">
-                  ${car.is_live ? 'Real vaxtlı video və sual-cavab' : 'Alıcılara maşını canlı göstərin'}
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                ${isOwner ? `
-                  ${car.is_live ? `
-                    <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
-                    <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
-                    <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
-                    <button type="button" class="live-ctrl-btn" onclick="selectLiveOrientation(_liveOrientation==='vertical'?'horizontal':'vertical')">Format: 9:16 / 16:9</button>
-                    <button type="button" class="btn-primary btn-live-red" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;">Canlı Yayımı Bitir</button>
-                  ` : `
-                    <button type="button" class="btn-primary btn-live-red" onclick="openLiveModePicker(${car.id})" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
-                  `}
-                ` : `
-                  ${car.is_live ? `
-                    <button type="button" class="live-ctrl-btn" id="btnViewerSound" onclick="toggleViewerAudio()">Səs: Bağlı (Aç)</button>
-                  ` : ''}
-                `}
-              </div>
-            </div>
-          ` : ''}
         </div>
 
         ${_galleryPhotos.length > 1 ? `
@@ -1102,7 +998,6 @@ function openCarDetail(id) {
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: PRICE, SELLER, ACTIONS & CHAT -->
       <div class="detail-side-card">
         <div>
           <div class="detail-price-big">${formatPrice(car.price)}</div>
@@ -1149,28 +1044,9 @@ function openCarDetail(id) {
             <span>29 ₼</span>
           </div>
         </div>
-
-        <div style="border-top:1px solid #e2e8f0;padding-top:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <span style="font-weight:800;font-size:0.86rem;color:#0f172a;">${car.is_live ? 'Canlı Yayım Çatı' : 'Satıcıya Sual Yaz'}</span>
-            <span style="font-size:0.74rem;color:#10b981;display:inline-flex;align-items:center;gap:5px;"><span class="status-online-dot"></span> Online</span>
-          </div>
-          <div class="chat-messages" id="liveChatContainer" style="max-height:170px;min-height:95px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;">
-            <div style="color:#64748b;font-size:0.82rem;">Yüklənir...</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-            <button type="button" class="chip-toggle" style="font-size:0.71rem;padding:4px 8px;" onclick="sendQuickQuestion(${car.id}, 'Salam, maşın bezkraskadır?')">Bezkraskadır?</button>
-            <button type="button" class="chip-toggle" style="font-size:0.71rem;padding:4px 8px;" onclick="sendQuickQuestion(${car.id}, 'Son qiymət nədir və barter mümkündür?')">Son qiymət</button>
-          </div>
-          <form class="chat-input-row" onsubmit="sendLiveChatMessage(event, ${car.id})" style="padding:0;border:none;background:transparent;">
-            <input type="text" class="form-input" id="liveChatInput" placeholder="Mesaj yazın..." required />
-            <button type="submit" class="btn-primary" style="padding:9px 14px;">Göndər</button>
-          </form>
-        </div>
       </div>
     </div>
 
-    <!-- TECHNICAL SPECS & DESCRIPTION -->
     <div class="detail-specs-section">
       <div class="detail-specs-2col" style="margin-bottom:20px;">
         <div class="detail-spec-row"><span>Şəhər</span><span>${car.city}</span></div>
@@ -1195,7 +1071,6 @@ function openCarDetail(id) {
       </div>
     </div>
 
-    <!-- OTHER USERS' LISTINGS AT THE BOTTOM -->
     <div class="other-listings-section">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;">Digər İstifadəçilərin Elanları</h3>
@@ -1207,7 +1082,6 @@ function openCarDetail(id) {
             <div class="car-card" onclick="openCarDetail(${oc.id})" style="cursor:pointer;">
               <div class="car-media" style="height:150px;">
                 <img src="${(oc.images && oc.images[0]) || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=600&q=80'}" alt="${oc.brand} ${oc.model}" />
-                ${oc.is_live ? `<span class="live-ring-badge" style="top:8px;left:8px;padding:3px 8px;font-size:0.68rem;">LIVE</span>` : ''}
               </div>
               <div style="padding:12px;">
                 <div class="car-price" style="font-size:1.05rem;">${formatPrice(oc.price)}</div>
@@ -1229,29 +1103,8 @@ function openCarDetail(id) {
   document.getElementById("liveDetailModal").classList.add("open");
   const modalWin = document.querySelector("#liveDetailModal .modal-window");
   if (modalWin) modalWin.scrollTop = 0;
-
-  loadLiveMessages(car.id);
-  if (_liveChatPollTimer) clearInterval(_liveChatPollTimer);
-  _liveChatPollTimer = setInterval(() => {
-    const modal = document.getElementById("liveDetailModal");
-    if (modal && modal.classList.contains("open")) {
-      loadLiveMessages(car.id);
-    } else {
-      clearInterval(_liveChatPollTimer);
-      _liveChatPollTimer = null;
-    }
-  }, 2500);
-  if (car.is_live) {
-    if (isOwner && !state.webcamStream) {
-      startOwnerBroadcast(car.id);
-    } else if (!isOwner && !state.webcamStream) {
-      connectAsLiveViewer(car.id);
-    }
-  }
 }
 
-// Cross-Device Real-Time WebRTC Live Streaming (PeerJS Cloud Signaling)
-// Broadcaster Peer ID: "avtolive-az-live-car-<listingId>"
 const _peerConfig = {
   config: {
     iceServers: [
@@ -1664,8 +1517,6 @@ function openPostModal(startLive = false, tier = "standard") {
     openAuthModal("login");
     return;
   }
-  document.getElementById("pStartLive").checked = startLive;
-  document.getElementById("liveTitleRow").style.display = startLive ? "flex" : "none";
   document.getElementById("pTier").value = tier;
   state.uploadedPhotos = [];
   renderUploadedPhotoPreviews();
@@ -1706,7 +1557,7 @@ async function submitNewListing(e) {
     image_url: finalImages[0],
     images: finalImages,
     description: document.getElementById("pDesc").value,
-    start_live: document.getElementById("pStartLive").checked,
+    start_live: false,
     credit: document.getElementById("pCredit").checked,
     barter: document.getElementById("pBarter").checked,
     live_title: document.getElementById("pLiveTitle").value
@@ -1851,6 +1702,7 @@ function openAuthModal(defaultTab = "login") {
         <div class="profile-edit-grid">
           <input type="text" class="form-input" id="profNameInput" value="${state.user.full_name || ''}" placeholder="Ad Soyad" />
           <input type="text" class="form-input" id="profPhoneInput" value="${state.user.phone || ''}" placeholder="Telefon" />
+          <input type="text" class="form-input" id="profSalonInput" value="${state.user.salon_name || ''}" placeholder="Avtosalon / Qalereya Adı (istəyə bağlı)" style="grid-column:1/-1;" />
         </div>
         <button type="button" class="btn-secondary" onclick="saveProfileChanges()" style="width:100%;justify-content:center;font-size:0.8rem;">Profili Yenilə</button>
       </div>
@@ -1877,6 +1729,9 @@ function openAuthModal(defaultTab = "login") {
         </div>
       </div>
 
+      <button type="button" class="btn-primary btn-live-red" style="width:100%;justify-content:center;margin-bottom:10px;" onclick="closeModal('authModal');openShowroomModePicker();">
+        ${iconSvg("broadcast")} Canlı Yayım Başlat (${state.user.salon_name ? state.user.salon_name : 'Avtosalon / Şəxsi Vitrin'})
+      </button>
       <div style="display:flex;gap:10px;">
         <button class="btn-primary" style="flex:1;justify-content:center;" onclick="closeModal('authModal');openPostModal(false);">
           ${iconSvg("plus")} Yeni Elan Yerləşdir
@@ -2411,12 +2266,13 @@ async function handleForgotResetSubmit() {
 async function saveProfileChanges() {
   const full_name = (document.getElementById("profNameInput").value || "").trim();
   const phone = (document.getElementById("profPhoneInput").value || "").trim();
+  const salon_name = (document.getElementById("profSalonInput")?.value || "").trim();
   if (!full_name) return showToast("Ad Soyad boş ola bilməz", "error");
   try {
     const res = await fetch(`${D1_API_BASE}/api/auth/profile`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
-      body: JSON.stringify({ full_name, phone })
+      body: JSON.stringify({ full_name, phone, salon_name })
     });
     const d = await res.json();
     if (!res.ok) return showToast(d.error || "Yeniləmə alınmadı", "error");
@@ -2727,5 +2583,383 @@ async function unpinLiveMessage(listingId) {
       body: JSON.stringify({ user_name: "Satıcı", message: "PIN::", is_seller: true })
     });
     loadLiveMessages(listingId);
+  } catch (err) {}
+}
+// ============================================================
+// ACCOUNT / AVTOSALON LIVE SHOWROOM STUDIO (v27)
+// ============================================================
+let _activeShowroomStreamId = null;
+let _showroomPollTimer = null;
+
+function openShowroomModePicker() {
+  if (!state.user || !state.token) {
+    showToast("Canlı yayım açmaq üçün əvvəlcə hesabınıza daxil olun", "error");
+    openAuthModal("login");
+    return;
+  }
+  _pendingLiveListingId = "showroom";
+  selectLiveOrientation(_liveOrientation);
+  document.getElementById("liveModeModal").classList.add("open");
+}
+
+async function confirmStartLiveWithMode() {
+  closeModal("liveModeModal");
+  if (_pendingLiveListingId === "showroom") {
+    await startShowroomLive();
+  }
+}
+
+async function startShowroomLive() {
+  if (!state.user || !state.token) return;
+  const title = state.user.salon_name
+    ? `${state.user.salon_name} — Canlı Avto Vitrin`
+    : `${state.user.full_name} — Canlı Təqdimat`;
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/showroom/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
+      body: JSON.stringify({ title, orientation: _liveOrientation })
+    });
+    const d = await res.json();
+    if (!res.ok || !d.stream) return showToast(d.error || "Canlı yayım açıla bilmədi", "error");
+    state.liveStreams = [d.stream, ...(state.liveStreams || []).filter(x => x.id !== d.stream.id)];
+    renderFeaturedHeroLive();
+    renderLiveStrip();
+    openShowroomLiveModal(d.stream.id, true);
+  } catch (err) {
+    showToast("Server xətası", "error");
+  }
+}
+
+function closeShowroomModal() {
+  if (_showroomPollTimer) {
+    clearInterval(_showroomPollTimer);
+    _showroomPollTimer = null;
+  }
+  if (state.viewerPeer) {
+    state.viewerPeer.destroy();
+    state.viewerPeer = null;
+  }
+  if (state.webcamStream) {
+    state.webcamStream.getTracks().forEach(t => t.stop());
+    state.webcamStream = null;
+  }
+  if (state.broadcasterPeer) {
+    state.broadcasterPeer.destroy();
+    state.broadcasterPeer = null;
+  }
+  const box = document.getElementById("liveMediaBox");
+  if (box) box.classList.remove("live-fullscreen-active");
+  _activeShowroomStreamId = null;
+  closeModal("showroomModal");
+}
+
+async function stopShowroomBroadcast() {
+  if (!state.token) return;
+  try {
+    await fetch(`${D1_API_BASE}/api/showroom/stop`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${state.token}` }
+    });
+  } catch (e) {}
+  state.liveStreams = (state.liveStreams || []).filter(s => s.user_id !== state.user?.id);
+  closeShowroomModal();
+  renderFeaturedHeroLive();
+  renderLiveStrip();
+  showToast("Canlı yayım dayandırıldı", "info");
+}
+
+function openShowroomLiveModal(streamId, justStarted = false) {
+  const stream = (state.liveStreams || []).find(s => s.id === streamId);
+  if (!stream || stream.is_live !== 1) {
+    showToast("Canlı yayım dayandırılıb", "info");
+    return;
+  }
+  _activeShowroomStreamId = streamId;
+  _liveOrientation = stream.orientation === "horizontal" ? "horizontal" : "vertical";
+  const isOwner = Boolean(state.user && state.user.id === stream.user_id);
+
+  document.getElementById("showroomModalTitle").textContent = stream.title;
+  document.getElementById("showroomLiveBadge").innerHTML = `${iconSvg("broadcast")} ${stream.is_salon ? 'AVTOSALON CANLI' : 'CANLI YAYIM'}`;
+
+  const body = document.getElementById("showroomModalBody");
+  body.innerHTML = `
+    <div class="detail-2col-grid" style="margin-bottom:0;">
+      <div>
+        <div class="detail-gallery-stage live-video-pane">
+          <div class="detail-gallery-media-box ${_liveOrientation === 'vertical' ? 'live-mode-vertical' : 'live-mode-horizontal'}" id="liveMediaBox">
+            <img id="studioMainImg" src="${stream.cover_image || 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80'}" alt="${stream.title}" />
+            <div class="live-hud-top">
+              <div style="display:flex;gap:6px;align-items:center;">
+                <span class="live-ring-badge" style="position:static;padding:4px 9px;font-size:0.72rem;">LIVE</span>
+                <span class="live-hud-pill">${iconSvg("eye")} ${stream.viewers || 1}</span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                ${!isOwner ? `<button type="button" class="live-hud-btn" id="hudSoundBtn" onclick="toggleViewerAudio()">🔊 Səs</button>` : ''}
+                <button type="button" class="live-hud-btn" onclick="toggleLiveFullscreen()">⛶</button>
+              </div>
+            </div>
+            <div class="pinned-live-banner" id="pinnedLiveBanner">
+              <span id="pinnedLiveText">📌 Sabit mesaj</span>
+              ${isOwner ? `<button type="button" onclick="unpinShowroomMessage(${stream.id})" style="background:none;border:none;color:#fff;font-weight:800;cursor:pointer;">✕</button>` : ''}
+            </div>
+            <button type="button" class="tap-unmute-banner" id="tapToUnmuteBtn" style="display:none;" onclick="unmuteViewerStream()">🔊 Səsi Aç</button>
+            <button type="button" class="live-heart-btn" onclick="spawnFloatingHeart()" title="Bəyən">❤️</button>
+            <div class="broadcaster-chat-overlay with-inline-reply" id="broadcasterChatOverlay"></div>
+            <form class="broadcaster-inline-reply" onsubmit="sendShowroomMessage(event, ${stream.id}, true)">
+              <input type="text" id="inlineLiveReplyInput" placeholder="${isOwner ? 'İzləyicilərə yazaraq cavab verin...' : 'Canlı yayıma şərh yazın...'}" required />
+              <button type="submit">Göndər</button>
+            </form>
+          </div>
+
+          <div class="live-controls-bar" style="position:static;margin:0;border-radius:0;border-top:1px solid rgba(255,255,255,0.12);background:#0f172a;">
+            <div>
+              <div style="font-weight:800;font-size:0.86rem;color:#fff;">${stream.salon_name || stream.seller_name}</div>
+              <div style="font-size:0.75rem;color:#cbd5e1;">${stream.seller_phone}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              ${isOwner ? `
+                <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
+                <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
+                <button type="button" class="live-ctrl-btn" onclick="flipShowroomCamera(${stream.id})">Kamera Çevir</button>
+                <button type="button" class="live-ctrl-btn" onclick="selectLiveOrientation(_liveOrientation==='vertical'?'horizontal':'vertical')">Format: 9:16 / 16:9</button>
+                <button type="button" class="btn-primary btn-live-red" onclick="stopShowroomBroadcast()" style="padding:7px 12px;font-size:0.78rem;">Yayımı Bitir</button>
+              ` : `
+                <button type="button" class="live-ctrl-btn" id="btnViewerSound" onclick="toggleViewerAudio()">Səs: Bağlı (Aç)</button>
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-side-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:800;font-size:0.92rem;color:#0f172a;">Canlı Yayım Çatı</span>
+          <span style="font-size:0.74rem;color:#10b981;display:inline-flex;align-items:center;gap:5px;"><span class="status-online-dot"></span> Canlı</span>
+        </div>
+        <div class="chat-messages" id="showroomChatContainer" style="max-height:280px;min-height:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+          <div style="color:#64748b;font-size:0.82rem;">Mesajlar yüklənir...</div>
+        </div>
+        ${!state.user && !isOwner ? `
+          <input type="text" class="form-input" id="viewerGuestName" placeholder="Adınız (Söhbətə qoşulmaq üçün)" />
+        ` : ''}
+        <form class="chat-input-row" onsubmit="sendShowroomMessage(event, ${stream.id}, false)" style="padding:0;border:none;background:transparent;">
+          <input type="text" class="form-input" id="showroomChatInput" placeholder="Mesajınızı yazın..." required />
+          <button type="submit" class="btn-primary" style="padding:9px 14px;">Göndər</button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("showroomModal").classList.add("open");
+  pollShowroomStatus(streamId, isOwner);
+  if (_showroomPollTimer) clearInterval(_showroomPollTimer);
+  _showroomPollTimer = setInterval(() => {
+    const modal = document.getElementById("showroomModal");
+    if (modal && modal.classList.contains("open")) {
+      pollShowroomStatus(streamId, isOwner);
+    } else {
+      clearInterval(_showroomPollTimer);
+      _showroomPollTimer = null;
+    }
+  }, 2500);
+
+  if (isOwner) {
+    startShowroomCamera(streamId);
+  } else {
+    connectShowroomViewer(streamId);
+  }
+}
+
+async function startShowroomCamera(streamId) {
+  if (state.webcamStream) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _camFacingMode, width: { ideal: _liveOrientation === "vertical" ? 720 : 1280 }, height: { ideal: _liveOrientation === "vertical" ? 1280 : 720 } },
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    }).catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
+    state.webcamStream = stream;
+    const mediaBox = document.getElementById("liveMediaBox");
+    if (mediaBox) {
+      let vid = document.getElementById("studioVideoEl");
+      if (!vid) {
+        const img = document.getElementById("studioMainImg");
+        vid = document.createElement("video");
+        vid.id = "studioVideoEl";
+        vid.autoplay = true;
+        vid.muted = true;
+        vid.playsInline = true;
+        if (img) img.replaceWith(vid);
+        else mediaBox.prepend(vid);
+      }
+      vid.srcObject = stream;
+      vid.play().catch(() => {});
+    }
+    if (typeof Peer !== "undefined") {
+      if (state.broadcasterPeer) state.broadcasterPeer.destroy();
+      const peer = new Peer("avtolive-az-showroom-" + streamId, _peerConfig);
+      state.broadcasterPeer = peer;
+      peer.on("call", (call) => call.answer(stream));
+    }
+    showToast("Canlı yayım (Kamera + Səs) başladı!", "success");
+  } catch (err) {
+    showToast("Kamera və ya mikrofon icazəsi verilmədi", "error");
+  }
+}
+
+async function flipShowroomCamera(streamId) {
+  _camFacingMode = _camFacingMode === "environment" ? "user" : "environment";
+  if (state.webcamStream) {
+    state.webcamStream.getTracks().forEach(t => t.stop());
+    state.webcamStream = null;
+  }
+  await startShowroomCamera(streamId);
+}
+
+function connectShowroomViewer(streamId) {
+  if (typeof Peer === "undefined") return;
+  try {
+    if (state.viewerPeer) {
+      state.viewerPeer.destroy();
+      state.viewerPeer = null;
+    }
+    const viewerPeer = new Peer(_peerConfig);
+    state.viewerPeer = viewerPeer;
+    viewerPeer.on("open", () => {
+      const dummyStream = createViewerOfferStream();
+      const call = viewerPeer.call("avtolive-az-showroom-" + streamId, dummyStream);
+      if (!call) return;
+      call.on("stream", (remoteStream) => {
+        const mediaBox = document.getElementById("liveMediaBox");
+        let videoEl = document.getElementById("studioVideoEl");
+        if (!videoEl && mediaBox) {
+          const img = document.getElementById("studioMainImg");
+          videoEl = document.createElement("video");
+          videoEl.id = "studioVideoEl";
+          videoEl.autoplay = true;
+          videoEl.playsInline = true;
+          if (img) img.replaceWith(videoEl);
+          else mediaBox.prepend(videoEl);
+        }
+        if (videoEl) {
+          videoEl.srcObject = remoteStream;
+          videoEl.muted = false;
+          videoEl.volume = 1.0;
+          videoEl.play().then(() => unmuteViewerStream()).catch(() => {
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+            const banner = document.getElementById("tapToUnmuteBtn");
+            if (banner) banner.style.display = "inline-flex";
+          });
+        }
+      });
+    });
+  } catch (e) {}
+}
+
+async function pollShowroomStatus(streamId, isOwner) {
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/showroom/status/${streamId}`);
+    const d = await res.json();
+    if (!d.stream || d.stream.is_live !== 1) {
+      // Broadcaster ended the stream: immediately close BOTH video and chat for viewers!
+      closeShowroomModal();
+      state.liveStreams = (state.liveStreams || []).filter(s => s.id !== streamId);
+      renderFeaturedHeroLive();
+      renderLiveStrip();
+      showToast("Canlı yayım dayandırıldı / sonlandırıldı", "info");
+      return;
+    }
+    const msgs = d.messages || [];
+    let latestPin = "";
+    const visibleMsgs = [];
+    msgs.forEach(m => {
+      if (typeof m.message === "string" && m.message.startsWith("PIN::")) {
+        latestPin = m.message.slice(5);
+      } else {
+        visibleMsgs.push(m);
+      }
+    });
+    const pinBanner = document.getElementById("pinnedLiveBanner");
+    const pinText = document.getElementById("pinnedLiveText");
+    if (pinBanner && pinText) {
+      if (latestPin) {
+        pinText.textContent = "📌 " + latestPin;
+        pinBanner.classList.add("visible");
+      } else {
+        pinBanner.classList.remove("visible");
+      }
+    }
+    const box = document.getElementById("showroomChatContainer");
+    if (box) {
+      box.innerHTML = visibleMsgs.length ? visibleMsgs.map(m => `
+        <div class="chat-bubble ${m.is_seller ? 'seller' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.74rem;color:${m.is_seller ? '#2563eb' : '#64748b'};font-weight:700;margin-bottom:3px;">
+            <span>${m.user_name}</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              ${isOwner ? `<button type="button" class="pin-msg-btn" onclick="pinShowroomMessage(${streamId}, '${(m.user_name + ': ' + m.message).replace(/'/g, "\\'")}')">📌 Sabitlə</button>` : ''}
+              <span>${m.created_at}</span>
+            </span>
+          </div>
+          <div>${m.message}</div>
+        </div>
+      `).join("") : '<div style="color:#64748b;font-size:0.82rem;">Hələ mesaj yoxdur. İlk sualı siz yazın!</div>';
+      box.scrollTop = box.scrollHeight;
+    }
+    const overlay = document.getElementById("broadcasterChatOverlay");
+    if (overlay) {
+      overlay.innerHTML = visibleMsgs.slice(-5).map(m => `
+        <div class="broadcaster-chat-item"><strong>${m.user_name}:</strong>${m.message}</div>
+      `).join("");
+      overlay.scrollTop = overlay.scrollHeight;
+    }
+  } catch (e) {}
+}
+
+async function sendShowroomMessage(e, streamId, fromInline) {
+  e.preventDefault();
+  const inp = document.getElementById(fromInline ? "inlineLiveReplyInput" : "showroomChatInput");
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = "";
+  const stream = (state.liveStreams || []).find(s => s.id === streamId);
+  const isSeller = Boolean(state.user && stream && state.user.id === stream.user_id);
+  const guestName = (document.getElementById("viewerGuestName")?.value || "").trim();
+  const userName = state.user ? (isSeller ? `${state.user.full_name} (Satıcı)` : state.user.full_name) : (guestName || "Alıcı");
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/showroom/${streamId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: userName, message: text, is_seller: isSeller })
+    });
+    if (res.status === 410) {
+      closeShowroomModal();
+      showToast("Canlı yayım dayandırıldı", "info");
+      return;
+    }
+    pollShowroomStatus(streamId, isSeller);
+  } catch (err) {}
+}
+
+async function pinShowroomMessage(streamId, text) {
+  try {
+    await fetch(`${D1_API_BASE}/api/showroom/${streamId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: "Satıcı", message: "PIN::" + text, is_seller: true })
+    });
+    pollShowroomStatus(streamId, true);
+  } catch (err) {}
+}
+
+async function unpinShowroomMessage(streamId) {
+  try {
+    await fetch(`${D1_API_BASE}/api/showroom/${streamId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: "Satıcı", message: "PIN::", is_seller: true })
+    });
+    pollShowroomStatus(streamId, true);
   } catch (err) {}
 }

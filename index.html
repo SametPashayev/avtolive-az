@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261127_v26" />
+  <link rel="stylesheet" href="./styles.css?v=20261127_v27" />
 </head>
 <body>
 
@@ -132,7 +132,7 @@
   <!-- Sticky Navigation Bar -->
   <header class="navbar">
     <div class="brand-logo" onclick="switchTab('all')">
-      <img src="./logo.svg?v=20261127_v26" alt="avtolive.az logo" />
+      <img src="./logo.svg?v=20261127_v27" alt="avtolive.az logo" />
     </div>
 
     <nav class="nav-links">
@@ -458,7 +458,7 @@
           </span>
           <span data-i18n="sec_live_title">Hazırda Canlı Yayımda Olan Avtomobillər</span>
         </div>
-        <button class="btn-secondary" style="padding:8px 14px;font-size:0.82rem;" onclick="openPostModal(true)">
+        <button class="btn-secondary" style="padding:8px 14px;font-size:0.82rem;" onclick="openShowroomModePicker()">
           <svg class="svg-icon sm"><use href="#i-video"/></svg>
           <span data-i18n="btn_broadcast_yours">Canlı Yayıma Başla</span>
         </button>
@@ -724,16 +724,10 @@
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.86rem;">
             <input type="checkbox" id="pBarter" /> Barter mümkündür
           </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;color:#bfdbfe;font-size:0.86rem;">
-            <input type="checkbox" id="pStartLive" onchange="document.getElementById('liveTitleRow').style.display = this.checked ? 'flex' : 'none'" />
-            İstəyə bağlı: Elan üçün Canlı Yayım (Live Showroom) aktivləşdir
-          </label>
+          
         </div>
 
-        <div class="form-control" id="liveTitleRow" style="margin-top:12px;display:none;">
-          <label>Canlı Yayım Başlığı</label>
-          <input type="text" class="form-input" id="pLiveTitle" placeholder="Məs: CANLI: Mühərrik və Salon Baxışı — Suallarınızı yazın!" />
-        </div>
+        
 
         <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
           <button type="button" class="btn-secondary" onclick="closeModal('postAdModal')">Ləğv et</button>
@@ -828,6 +822,21 @@
     </div>
   </div>
 
+
+  <!-- SHOWROOM LIVE STREAM MODAL (SALONS / GALLERIES / MEMBERS) -->
+  <div class="modal-backdrop" id="showroomModal">
+    <div class="modal-window" style="max-width:980px;width:96vw;">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="live-ring-badge" style="position:static;padding:4px 10px;font-size:0.74rem;" id="showroomLiveBadge">LIVE SHOWROOM</span>
+          <h3 style="font-size:1.02rem;font-weight:800;" id="showroomModalTitle">Canlı Avto Vitrin</h3>
+        </div>
+        <button class="close-btn" onclick="closeShowroomModal()">✕</button>
+      </div>
+      <div style="padding:18px;" id="showroomModalBody"></div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -835,7 +844,7 @@
   <footer class="footer">
     <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
       <div>
-        <img src="./logo.svg?v=20261127_v26" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
+        <img src="./logo.svg?v=20261127_v27" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
         <p style="color:var(--text-muted);font-size:0.84rem;">
           © 2026 avtolive.az — Standart Avtomobil Elanları və Canlı Yayım Platforması.
         </p>
@@ -850,8 +859,8 @@
   </footer>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="./seed_data.js?v=20261127_v26"></script>
-  <script src="./brands_models.js?v=20261127_v26"></script>
-  <script src="./app.js?v=20261127_v26"></script>
+  <script src="./seed_data.js?v=20261127_v27"></script>
+  <script src="./brands_models.js?v=20261127_v27"></script>
+  <script src="./app.js?v=20261127_v27"></script>
 </body>
 </html>
