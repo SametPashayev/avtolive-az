@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261127_v25" />
+  <link rel="stylesheet" href="./styles.css?v=20261127_v26" />
 </head>
 <body>
 
@@ -132,7 +132,7 @@
   <!-- Sticky Navigation Bar -->
   <header class="navbar">
     <div class="brand-logo" onclick="switchTab('all')">
-      <img src="./logo.svg?v=20261127_v25" alt="avtolive.az logo" />
+      <img src="./logo.svg?v=20261127_v26" alt="avtolive.az logo" />
     </div>
 
     <nav class="nav-links">
@@ -797,6 +797,37 @@
     <div class="lightbox-thumbs" id="lightboxThumbs"></div>
   </div>
 
+
+  <!-- LIVE ORIENTATION PICKER MODAL -->
+  <div class="modal-backdrop" id="liveModeModal">
+    <div class="modal-window" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 style="font-size:1.05rem;font-weight:800;">Canlı Yayım Formatını Seçin</h3>
+        <button class="close-btn" onclick="closeModal('liveModeModal')">✕</button>
+      </div>
+      <div style="padding:20px;">
+        <p style="font-size:0.85rem;color:#475569;margin-bottom:8px;">
+          Canlı yayımınızın görünüm formatını seçin (yayın zamanı da dəyişə bilərsiniz):
+        </p>
+        <div class="live-mode-grid">
+          <div class="live-mode-option selected" id="modeOptVertical" onclick="selectLiveOrientation('vertical')">
+            <div style="font-size:1.7rem;margin-bottom:6px;">📱</div>
+            <strong style="display:block;color:#0f172a;font-size:0.92rem;">Dikey (9:16)</strong>
+            <span style="font-size:0.75rem;color:#64748b;">TikTok / Instagram stili</span>
+          </div>
+          <div class="live-mode-option" id="modeOptHorizontal" onclick="selectLiveOrientation('horizontal')">
+            <div style="font-size:1.7rem;margin-bottom:6px;">🖥️</div>
+            <strong style="display:block;color:#0f172a;font-size:0.92rem;">Yatay (16:9)</strong>
+            <span style="font-size:0.75rem;color:#64748b;">Geniş ekran / Masaüstü</span>
+          </div>
+        </div>
+        <button type="button" class="btn-primary btn-live-red" onclick="confirmStartLiveWithMode()" style="width:100%;justify-content:center;padding:12px;">
+          Canlı Yayımı Başlat
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -804,7 +835,7 @@
   <footer class="footer">
     <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
       <div>
-        <img src="./logo.svg?v=20261127_v25" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
+        <img src="./logo.svg?v=20261127_v26" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
         <p style="color:var(--text-muted);font-size:0.84rem;">
           © 2026 avtolive.az — Standart Avtomobil Elanları və Canlı Yayım Platforması.
         </p>
@@ -819,8 +850,8 @@
   </footer>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="./seed_data.js?v=20261127_v25"></script>
-  <script src="./brands_models.js?v=20261127_v25"></script>
-  <script src="./app.js?v=20261127_v25"></script>
+  <script src="./seed_data.js?v=20261127_v26"></script>
+  <script src="./brands_models.js?v=20261127_v26"></script>
+  <script src="./app.js?v=20261127_v26"></script>
 </body>
 </html>

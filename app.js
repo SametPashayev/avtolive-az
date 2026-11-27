@@ -1018,7 +1018,7 @@ function openCarDetail(id) {
       <!-- LEFT COLUMN: MEDIA GALLERY / LIVE STUDIO -->
       <div>
         <div class="detail-gallery-stage live-video-pane">
-          <div class="detail-gallery-media-box">
+          <div class="detail-gallery-media-box ${car.is_live ? (_liveOrientation === 'vertical' ? 'live-mode-vertical' : 'live-mode-horizontal') : ''}" id="liveMediaBox">
             ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
               <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
             ` : `
@@ -1043,7 +1043,17 @@ function openCarDetail(id) {
               <button type="button" class="tap-unmute-banner" id="tapToUnmuteBtn" style="display:none;" onclick="unmuteViewerStream()">🔊 Səsi Aç</button>
               <button type="button" class="live-heart-btn" onclick="spawnFloatingHeart()" title="Bəyən">❤️</button>
             ` : ''}
-            <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${car.is_live ? 'flex' : 'none'};"></div>
+            <div class="pinned-live-banner" id="pinnedLiveBanner">
+              <span id="pinnedLiveText">📌 Sabit mesaj</span>
+              ${isOwner ? `<button type="button" onclick="unpinLiveMessage(${car.id})" style="background:none;border:none;color:#fff;font-weight:800;cursor:pointer;">✕</button>` : ''}
+            </div>
+            <div class="broadcaster-chat-overlay ${car.is_live ? 'with-inline-reply' : ''}" id="broadcasterChatOverlay" style="display:${car.is_live ? 'flex' : 'none'};"></div>
+            ${car.is_live ? `
+              <form class="broadcaster-inline-reply" onsubmit="sendInlineLiveReply(event, ${car.id})">
+                <input type="text" id="inlineLiveReplyInput" placeholder="${isOwner ? 'İzləyicilərə yazaraq cavab verin...' : 'Canlı yayıma şərh yazın...'}" required />
+                <button type="submit">Göndər</button>
+              </form>
+            ` : ''}
           </div>
 
           ${(isOwner || car.is_live) ? `
@@ -1062,9 +1072,10 @@ function openCarDetail(id) {
                     <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
                     <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
                     <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
+                    <button type="button" class="live-ctrl-btn" onclick="selectLiveOrientation(_liveOrientation==='vertical'?'horizontal':'vertical')">Format: 9:16 / 16:9</button>
                     <button type="button" class="btn-primary btn-live-red" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;">Canlı Yayımı Bitir</button>
                   ` : `
-                    <button type="button" class="btn-primary btn-live-red" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
+                    <button type="button" class="btn-primary btn-live-red" onclick="openLiveModePicker(${car.id})" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
                   `}
                 ` : `
                   ${car.is_live ? `
@@ -1348,11 +1359,35 @@ async function loadLiveMessages(listingId) {
     const box = document.getElementById("liveChatContainer");
     if (!box) return;
     const msgs = data.messages || [];
-    box.innerHTML = msgs.map(m => `
+    const carObj = state.listings.find(c => c.id === listingId);
+    const ownerCheck = isListingOwner(carObj);
+    let latestPin = "";
+    const visibleMsgs = [];
+    msgs.forEach(m => {
+      if (typeof m.message === "string" && m.message.startsWith("PIN::")) {
+        latestPin = m.message.slice(5);
+      } else {
+        visibleMsgs.push(m);
+      }
+    });
+    const pinBanner = document.getElementById("pinnedLiveBanner");
+    const pinText = document.getElementById("pinnedLiveText");
+    if (pinBanner && pinText) {
+      if (latestPin) {
+        pinText.textContent = "📌 " + latestPin;
+        pinBanner.classList.add("visible");
+      } else {
+        pinBanner.classList.remove("visible");
+      }
+    }
+    box.innerHTML = visibleMsgs.map(m => `
       <div class="chat-bubble ${m.is_seller ? 'seller' : ''}">
-        <div style="display:flex;justify-content:space-between;font-size:0.74rem;color:${m.is_seller ? '#2563eb' : '#94a3b8'};font-weight:700;margin-bottom:3px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.74rem;color:${m.is_seller ? '#2563eb' : '#64748b'};font-weight:700;margin-bottom:3px;">
           <span>${m.user_name}</span>
-          <span>${m.created_at}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;">
+            ${ownerCheck ? `<button type="button" class="pin-msg-btn" onclick="pinLiveMessage(${listingId}, '${(m.user_name + ': ' + m.message).replace(/'/g, "\'")}')">📌 Sabitlə</button>` : ''}
+            <span>${m.created_at}</span>
+          </span>
         </div>
         <div>${m.message}</div>
       </div>
@@ -1360,7 +1395,7 @@ async function loadLiveMessages(listingId) {
     box.scrollTop = box.scrollHeight;
     const overlay = document.getElementById("broadcasterChatOverlay");
     if (overlay) {
-      const recent = msgs.slice(-5);
+      const recent = visibleMsgs.slice(-5);
       overlay.innerHTML = recent.map(m => `
         <div class="broadcaster-chat-item"><strong>${m.user_name}:</strong>${m.message}</div>
       `).join("");
@@ -1586,6 +1621,35 @@ function renderUploadedPhotoPreviews() {
   `).join("");
 }
 
+
+
+let _liveOrientation = "vertical";
+let _pendingLiveListingId = null;
+
+function openLiveModePicker(listingId) {
+  _pendingLiveListingId = listingId;
+  selectLiveOrientation(_liveOrientation);
+  document.getElementById("liveModeModal").classList.add("open");
+}
+
+function selectLiveOrientation(mode) {
+  _liveOrientation = mode === "horizontal" ? "horizontal" : "vertical";
+  const v = document.getElementById("modeOptVertical");
+  const h = document.getElementById("modeOptHorizontal");
+  if (v) v.classList.toggle("selected", _liveOrientation === "vertical");
+  if (h) h.classList.toggle("selected", _liveOrientation === "horizontal");
+  const box = document.getElementById("liveMediaBox");
+  if (box) {
+    box.classList.toggle("live-mode-vertical", _liveOrientation === "vertical");
+    box.classList.toggle("live-mode-horizontal", _liveOrientation === "horizontal");
+  }
+}
+
+async function confirmStartLiveWithMode() {
+  const id = _pendingLiveListingId;
+  closeModal("liveModeModal");
+  if (id) await toggleLiveStatus(id, 1);
+}
 
 function isListingOwner(car) {
   if (!state.user || !car) return false;
@@ -2461,7 +2525,7 @@ async function startOwnerBroadcast(listingId) {
   if (state.webcamStream) return;
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: _camFacingMode },
+      video: { facingMode: _camFacingMode, width: { ideal: _liveOrientation === "vertical" ? 720 : 1280 }, height: { ideal: _liveOrientation === "vertical" ? 1280 : 720 } },
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     }).catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
     state.webcamStream = stream;
@@ -2561,11 +2625,12 @@ function spawnFloatingHeart() {
 }
 
 function toggleLiveFullscreen() {
-  const box = document.querySelector("#liveDetailModal .detail-gallery-media-box");
+  const box = document.getElementById("liveMediaBox") || document.querySelector("#liveDetailModal .detail-gallery-media-box");
   if (!box) return;
-  if (!document.fullscreenElement && box.requestFullscreen) {
+  const active = box.classList.toggle("live-fullscreen-active");
+  if (active && box.requestFullscreen) {
     box.requestFullscreen().catch(() => {});
-  } else if (document.fullscreenElement && document.exitFullscreen) {
+  } else if (!active && document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
   }
 }
@@ -2622,3 +2687,45 @@ window.addEventListener("DOMContentLoaded", () => {
     }, { passive: true });
   }
 });
+async function sendInlineLiveReply(e, listingId) {
+  e.preventDefault();
+  const inp = document.getElementById("inlineLiveReplyInput");
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = "";
+  const car = state.listings.find(c => c.id === listingId);
+  const isSeller = isListingOwner(car);
+  const senderName = state.user ? state.user.full_name : "Alıcı";
+  try {
+    await fetch(`${D1_API_BASE}/api/live/${listingId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: isSeller ? `${senderName} (Satıcı)` : senderName, message: text, is_seller: isSeller })
+    });
+    loadLiveMessages(listingId);
+  } catch (err) {}
+}
+
+async function pinLiveMessage(listingId, text) {
+  try {
+    await fetch(`${D1_API_BASE}/api/live/${listingId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: "Satıcı", message: "PIN::" + text, is_seller: true })
+    });
+    loadLiveMessages(listingId);
+    showToast("Mesaj canlı yayımda sabitləndi", "success");
+  } catch (err) {}
+}
+
+async function unpinLiveMessage(listingId) {
+  try {
+    await fetch(`${D1_API_BASE}/api/live/${listingId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_name: "Satıcı", message: "PIN::", is_seller: true })
+    });
+    loadLiveMessages(listingId);
+  } catch (err) {}
+}
