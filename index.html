@@ -3,838 +3,411 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <title>avtolive.az — Azərbaycanın Avtomobil Bazarı və Canlı Vitrin Platforması</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261127_v28" />
+  <title>TəklifAl.az — Usta və Servis Qiymət Hərracı Platforması</title>
+  <meta name="description" content="Problemi yazın, Bakı və Azərbaycan üzrə peşəkar ustalardan 5 dəqiqədə hazır qiymət təklifləri alın. Müştərilər üçün 100% pulsuz!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css?v=20261127_ta1" />
 </head>
 <body>
-
-  <!-- Reusable SVG Sprite Definitions -->
-  <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
-    <!-- Broadcast Live Signal Icon -->
-    <symbol id="i-broadcast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
-      <path class="broadcast-wave" d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/>
-      <path class="broadcast-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>
-    </symbol>
-    <!-- Sport Car Icon -->
-    <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
-      <circle cx="7" cy="17" r="2"/>
-      <path d="M9 17h6"/>
-      <circle cx="17" cy="17" r="2"/>
-    </symbol>
-    <!-- Dealership / Showroom Building Icon -->
-    <symbol id="i-salon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 21h18"/>
-      <path d="M5 21V7l8-4v18"/>
-      <path d="M19 21V11l-6-4"/>
-      <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/>
-    </symbol>
-    <!-- VIP Crown / Diamond Icon -->
-    <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/>
-    </symbol>
-    <!-- Heart / Favorite Icon -->
-    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-    </symbol>
-    <!-- Video Camera Icon -->
-    <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m22 8-6 4 6 4V8Z"/>
-      <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-    </symbol>
-    <!-- Search / Filter Sliders Icon -->
-    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/>
-      <line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/>
-      <line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/>
-      <line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>
-    </symbol>
-    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-    </symbol>
-    <!-- User / Auth / Key Icons -->
-    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-    </symbol>
-    <symbol id="i-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-      <line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>
-    </symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12h14"/><path d="M12 5v14"/>
-    </symbol>
-    <!-- Bank / Credit & Barter / Exchange Icons -->
-    <symbol id="i-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/>
-      <line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>
-    </symbol>
-    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
-      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
-    </symbol>
-    <!-- Location / Phone / Eye / Check / Chevron -->
-    <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
-    </symbol>
-    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-    </symbol>
-    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
-    </symbol>
-    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="20 6 9 17 4 12"/>
-    </symbol>
-    <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m6 9 6 6 6-6"/>
-    </symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/>
-    </symbol>
-  </svg>
-
-  <!-- Executive Top Bar -->
+  <!-- Top Executive Bar -->
   <div class="top-promo-bar">
-    <div class="promo-left">
-      <span class="live-pill-mini">
-        <svg class="svg-icon sm"><use href="#i-broadcast"/></svg>
-        AVTOLIVE.AZ
+    <div class="top-promo-left">
+      <span class="brand-pill-mini">TƏKLİFAL.AZ</span>
+      <span id="promoText" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        Problemi yazın, ustalardan 5 dəqiqədə hazır qiymət təklifi alın — Müştərilər üçün 0 ₼!
       </span>
-      <span id="promoText">Standart Avtomobil Elanları və Canlı Yayım Vitrini — VIP Paketlər 55% Daha Sərfəli</span>
     </div>
-    <div class="promo-right">
-      <span class="top-meta-item">
-        <svg class="svg-icon sm"><use href="#i-phone"/></svg>
-        *8899 | Bakı, Azərbaycan
-      </span>
-      <span class="top-meta-item">
+    <div class="top-promo-right">
+      <span>*8899 | Bakı, Azərbaycan</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;">
         <span class="status-online-dot"></span>
-        <span id="activeUsersBadge">Real vaxtlı elan platforması</span>
+        <span id="activeRequestsBadge">Aktiv sorğular: 0</span>
       </span>
-      <button class="top-auth-link" onclick="openAuthModal('login')">
-        <svg class="svg-icon sm"><use href="#i-user"/></svg>
-        <span data-i18n="top_login">Giriş</span>
-      </button>
-      <button class="top-auth-link accent" onclick="openAuthModal('register')">
-        <svg class="svg-icon sm"><use href="#i-user-plus"/></svg>
-        <span data-i18n="top_register">Qeydiyyat</span>
-      </button>
+      <button type="button" class="btn-secondary top-auth-link" onclick="openAuthModal('login')" style="padding:4px 10px;font-size:0.75rem;">Giriş</button>
+      <button type="button" class="btn-primary top-auth-link" onclick="openAuthModal('register')" style="padding:4px 10px;font-size:0.75rem;">Qeydiyyat</button>
     </div>
   </div>
 
   <!-- Sticky Navigation Bar -->
   <header class="navbar">
-    <div class="brand-logo" onclick="switchTab('all')">
-      <img src="./logo.svg?v=20261127_v28" alt="avtolive.az logo" />
-    </div>
-
-    <nav class="nav-links">
-      <button class="nav-btn active" id="navAll" onclick="switchTab('all')">
-        <svg class="svg-icon"><use href="#i-car"/></svg>
-        <span data-i18n="nav_all">Bütün Elanlar</span>
-      </button>
-      <button class="nav-btn live-nav" id="navLive" onclick="switchTab('live')">
-        <svg class="svg-icon"><use href="#i-broadcast"/></svg>
-        <span data-i18n="nav_live">Canlı Yayımlar</span>
-        <span id="liveCountNav" class="nav-counter">4</span>
-      </button>
-      <button class="nav-btn" id="navSalons" onclick="switchTab('salons')">
-        <svg class="svg-icon"><use href="#i-salon"/></svg>
-        <span data-i18n="nav_salons">Avtosalonlar</span>
-      </button>
-      <button class="nav-btn" id="navPricing" onclick="switchTab('pricing')">
-        <svg class="svg-icon"><use href="#i-crown"/></svg>
-        <span data-i18n="nav_pricing">Tariflər</span>
-      </button>
-      <button class="nav-btn" id="navFavs" onclick="switchTab('favorites')">
-        <svg class="svg-icon"><use href="#i-heart"/></svg>
-        <span data-i18n="nav_favs">Seçilmişlər</span>
-        <span id="favCountBadge" class="nav-counter" style="background:#334155;">0</span>
-      </button>
-    </nav>
-
-    <div class="nav-actions">
-      <!-- Currency Switcher -->
-      <div class="switcher-group" title="Valyuta">
-        <button class="curr-btn active" onclick="setCurrency('AZN')" id="currAZN">AZN ₼</button>
-        <button class="curr-btn" onclick="setCurrency('USD')" id="currUSD">USD $</button>
+    <div class="navbar-inner">
+      <div class="brand-logo" onclick="switchTab('requests')">
+        <img src="./logo.svg?v=20261127_ta1" alt="TəklifAl.az logo" />
       </div>
 
-      <!-- 3-Language Switcher: AZ | TR | RU -->
-      <div class="switcher-group" title="Dil seçimi">
-        <button class="lang-btn active" onclick="setLanguage('az')" id="langAZ">AZ</button>
-        <button class="lang-btn" onclick="setLanguage('tr')" id="langTR">TR</button>
-        <button class="lang-btn" onclick="setLanguage('ru')" id="langRU">RU</button>
-      </div>
-
-      <!-- Auth Buttons -->
-      <div id="guestAuthBtns" style="display:inline-flex;gap:8px;align-items:center;">
-        <button class="btn-secondary" onclick="openAuthModal('login')">
-          <svg class="svg-icon"><use href="#i-user"/></svg>
-          <span data-i18n="btn_login_only">Giriş</span>
+      <nav class="nav-links">
+        <button type="button" class="nav-btn active" id="navRequests" onclick="switchTab('requests')">
+          Bütün Sorğular <span class="nav-counter" id="reqCountNav">0</span>
         </button>
-        <button class="btn-secondary" onclick="openAuthModal('register')" style="border-color:rgba(37,99,235,0.45);">
-          <svg class="svg-icon"><use href="#i-user-plus"/></svg>
-          <span data-i18n="btn_register_only">Qeydiyyat</span>
+        <button type="button" class="nav-btn" id="navMasters" onclick="switchTab('masters')">
+          Ustalar və Servislər <span class="nav-counter" id="mastersCountNav">0</span>
+        </button>
+        <button type="button" class="nav-btn" id="navPricing" onclick="switchTab('pricing')">
+          Necə İşləyir & Tariflər
+        </button>
+        <button type="button" class="nav-btn" id="navMine" onclick="switchTab('mine')">
+          Mənim Sorğularım <span class="nav-counter" id="mineCountNav">0</span>
+        </button>
+      </nav>
+
+      <div class="nav-actions">
+        <div id="guestAuthBtns" style="display:inline-flex;gap:8px;">
+          <button type="button" class="btn-secondary" onclick="openAuthModal('login')">Giriş</button>
+          <button type="button" class="btn-secondary" onclick="openAuthModal('register')" style="border-color:#93c5fd;color:#1d4ed8;">Qeydiyyat</button>
+        </div>
+
+        <button type="button" class="btn-secondary" id="userProfileBtn" onclick="openAuthModal()" style="display:none;border-color:#93c5fd;color:#1d4ed8;font-weight:700;">
+          <span id="authBtnText">Hesabım</span>
+        </button>
+
+        <button type="button" class="btn-emerald" onclick="openNewRequestModal()">
+          + Yeni Sorğu Yarat
         </button>
       </div>
-      <button class="btn-secondary" id="userProfileBtn" onclick="openAuthModal('profile')" style="display:none;">
-        <svg class="svg-icon"><use href="#i-user"/></svg>
-        <span id="authBtnText">Kabinet</span>
-      </button>
-
-      <!-- Post Ad CTA -->
-      <button class="btn-primary" onclick="openPostModal(false)">
-        <svg class="svg-icon"><use href="#i-plus"/></svg>
-        <span data-i18n="btn_post_ad">Yeni Elan</span>
-      </button>
     </div>
   </header>
 
-  <!-- Main Content Container -->
   <main class="container">
-
     <!-- HERO SECTION -->
-    <section class="hero-section" id="heroSection">
+    <section class="hero-grid" id="heroSection">
       <div class="hero-card">
         <div>
-          <div class="hero-badge">
-            <svg class="svg-icon sm"><use href="#i-broadcast"/></svg>
-            <span data-i18n="hero_badge">STANDART ELANLAR VƏ CANLI AVTOMOBİL VİTRİNİ</span>
-          </div>
-          <h1 class="hero-title" id="heroTitle">
-            Maşını Həm Foto Qalereyada, Həm də <span>Canlı Yayımda</span> Yoxla və Al!
+          <div class="hero-badge">⚡ Azərbaycanda İlk Tərs-Hərrac Usta Platforması</div>
+          <h1 class="hero-title" style="margin-top:12px;">
+            Usta axtarmağa vaxt itirməyin — <span>Ustalar sizə qiymət təklif etsin!</span>
           </h1>
-          <p class="hero-subtitle" id="heroSubtitle">
-            İstər standart fotoşəkilli elan yerləşdirin, istərsə də avtomobilinizi birbaşa canlı yayımda alıcılara nümayiş etdirin. Bütün elan və VIP vitrin paketləri 55% daha sərfəlidir.
+          <p class="hero-desc" style="margin-top:10px;">
+            Kombi, kondisioner, santexnika, elektrik, məişət texnikası və ya avtoservis problemini yazın. Ərazinizdəki ustalar 5 dəqiqədə öz qiymətlərini göndərsin, ən sərfəlisini seçin.
           </p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <button class="btn-primary btn-live-red" onclick="switchTab('live')">
-              <svg class="svg-icon"><use href="#i-broadcast"/></svg>
-              <span data-i18n="btn_watch_live">Canlı Yayımlara Bax</span>
-            </button>
-            <button class="btn-success" onclick="openPostModal(false)">
-              <svg class="svg-icon"><use href="#i-plus"/></svg>
-              <span data-i18n="btn_start_own_live">Yeni Elan Yerləşdir</span>
-            </button>
-            <button class="btn-secondary" onclick="switchTab('pricing')">
-              <svg class="svg-icon"><use href="#i-crown"/></svg>
-              <span data-i18n="btn_compare_prices">Tarifləri Müqayisə Et</span>
-            </button>
+        </div>
+
+        <div>
+          <div style="font-size:0.78rem;font-weight:800;color:#64748b;margin-bottom:8px;letter-spacing:0.5px;">POPULYAR XİDMƏT KATEQORİYALARI:</div>
+          <div class="quick-cats" id="quickCatChips">
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('')">Hamısı</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Kombi və İsitmə')">🔥 Kombi və İsitmə</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Kondisioner və Havalandırma')">❄️ Kondisioner</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Santexnika')">🚰 Santexnika</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Elektrik')">⚡ Elektrik</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Məişət Texnikası')">🧺 Məişət Texnikası</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Avtoservis və Evakuator')">🔧 Avtoservis & Evakuator</button>
+            <button type="button" class="cat-chip" onclick="quickSelectCategory('Ev Təmiri və Rəngsaz')">🏠 Ev Təmiri</button>
           </div>
         </div>
 
-        <div class="hero-stats">
-          <div class="stat-box">
-            <h4>0 ₼</h4>
-            <p data-i18n="stat_free_ad">Standart Elan & Canlı Yayım</p>
-          </div>
-          <div class="stat-box">
-            <h4>-55%</h4>
-            <p data-i18n="stat_cheaper">Daha Sərfəli VIP Vitrin</p>
-          </div>
-          <div class="stat-box">
-            <h4>147+</h4>
-            <p data-i18n="stat_transparent">Rəsmi Marka və 1600+ Model</p>
-          </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" class="btn-emerald" onclick="openNewRequestModal()" style="padding:12px 20px;font-size:0.94rem;">
+            + Pulsuz Sorğu Yarat (30 san)
+          </button>
+          <button type="button" class="btn-secondary" onclick="openAuthModal('register')">
+            Usta Kimi Qoşul və Sifariş Qazan
+          </button>
         </div>
       </div>
 
-      <!-- Featured Live Stream Preview -->
-      <div class="hero-live-stage" id="featuredLiveStage"></div>
+      <div class="hero-how-card">
+        <div>
+          <span class="brand-pill-mini" style="background:#2563eb;">NECƏ İŞLƏYİR?</span>
+          <h3 style="font-size:1.3rem;font-weight:900;margin-top:10px;">3 Addımda Şəffaf Qiymət və Zəmanətli Usta</h3>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="step-row">
+            <div class="step-num">1</div>
+            <div>
+              <strong style="font-size:0.9rem;display:block;">Problemi və Ünvanı Yazın</strong>
+              <span style="font-size:0.79rem;color:#cbd5e1;">Məsələn: "Kombi su axıdır, Yasamal" + varsa şəkil əlavə edin.</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="step-num">2</div>
+            <div>
+              <strong style="font-size:0.9rem;display:block;">Hazır Qiymət Təklifləri Alın</strong>
+              <span style="font-size:0.79rem;color:#cbd5e1;">Ustalar qiymət, gəliş vaxtı və zəmanət müddəti ilə təklif göndərir.</span>
+            </div>
+          </div>
+          <div class="step-row">
+            <div class="step-num">3</div>
+            <div>
+              <strong style="font-size:0.9rem;display:block;">Ən Sərfəli Ustanı Seçin</strong>
+              <span style="font-size:0.79rem;color:#cbd5e1;">Təklifi qəbul edin, iş bitdikdən sonra ustaya reytinq verin.</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;color:#93c5fd;border-top:1px solid rgba(255,255,255,0.12);padding-top:12px;">
+          <span>Müştərilər üçün: <strong style="color:#fff;">100% Pulsuz</strong></span>
+          <span>Ustalar üçün: <strong style="color:#34d399;">2 ₼ / təklif və ya PRO</strong></span>
+        </div>
+      </div>
     </section>
 
-    <!-- ============================================================
-         CUSTOM DARK AUTOMOTIVE FILTER COCKPIT (No Native White Selects)
-         ============================================================ -->
+    <!-- FILTER PANEL -->
     <section class="filter-panel" id="filterPanel">
-      <div class="filter-header">
-        <div class="filter-title-group">
-          <div class="filter-icon-box">
-            <svg class="svg-icon lg"><use href="#i-sliders"/></svg>
-          </div>
-          <div>
-            <h3 style="font-size:1.05rem;font-weight:800;" data-i18n="filter_title">Avtomobil Axtarış Sistemi</h3>
-            <p style="font-size:0.76rem;color:#64748b;">147 marka və 1,600+ model üzrə dəqiq filtrasiya</p>
-          </div>
-          <div class="condition-tabs" style="margin-left:10px;">
-            <button class="cond-tab active" id="condAll" onclick="setConditionFilter('all')" data-i18n="cond_all">Hamısı</button>
-            <button class="cond-tab" id="condNew" onclick="setConditionFilter('new')" data-i18n="cond_new">Yeni (0 km)</button>
-            <button class="cond-tab" id="condUsed" onclick="setConditionFilter('used')" data-i18n="cond_used">Yürüşlü</button>
-          </div>
-        </div>
-
-        <button class="btn-secondary" style="padding:8px 14px;font-size:0.81rem;" onclick="resetFilters()">
-          <svg class="svg-icon sm"><use href="#i-refresh"/></svg>
-          <span data-i18n="btn_reset_filters">Filtrləri Sıfırla</span>
-        </button>
-      </div>
-
-      <!-- Hidden backing inputs for filter values -->
-      <input type="hidden" id="fBrand" value="" />
-      <input type="hidden" id="fModel" value="" />
-      <input type="hidden" id="fCity" value="" />
-      <input type="hidden" id="fBody" value="" />
-      <input type="hidden" id="fFuel" value="" />
-      <input type="hidden" id="fGear" value="" />
-      <input type="hidden" id="fSort" value="featured" />
-
       <div class="filter-grid">
-        <!-- 1. Custom Dark Searchable Brand Selector -->
-        <div class="filter-field-box" id="ddBox_brand">
-          <div class="filter-field-label" data-i18n="lbl_brand">Marka</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('brand', event)">
-            <span id="ddLabel_brand" class="placeholder">Bütün markalar</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-search-wrap">
-              <svg class="svg-icon sm" style="color:#64748b;"><use href="#i-search"/></svg>
-              <input type="text" class="custom-dd-search" id="ddSearch_brand" placeholder="Marka axtar (BMW, Mercedes, LADA...)" oninput="filterDropdownList('brand')" />
-            </div>
-            <div class="custom-dd-list" id="ddList_brand"></div>
-          </div>
-        </div>
+        <select class="form-select" id="fCategory" onchange="applyFilters()">
+          <option value="">Bütün Kateqoriyalar</option>
+          <option value="Kombi və İsitmə">Kombi və İsitmə</option>
+          <option value="Kondisioner və Havalandırma">Kondisioner və Havalandırma</option>
+          <option value="Santexnika">Santexnika</option>
+          <option value="Elektrik">Elektrik</option>
+          <option value="Məişət Texnikası">Məişət Texnikası</option>
+          <option value="Avtoservis və Evakuator">Avtoservis və Evakuator</option>
+          <option value="Ev Təmiri və Rəngsaz">Ev Təmiri və Rəngsaz</option>
+          <option value="Mebel və Qapı-Pəncərə">Mebel və Qapı-Pəncərə</option>
+          <option value="Təmizlik Xidməti">Təmizlik Xidməti</option>
+          <option value="Digər">Digər</option>
+        </select>
 
-        <!-- 2. Custom Dark Searchable Model Selector -->
-        <div class="filter-field-box" id="ddBox_model">
-          <div class="filter-field-label" data-i18n="lbl_model">Model</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('model', event)">
-            <span id="ddLabel_model" class="placeholder">Bütün modellər</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-search-wrap">
-              <svg class="svg-icon sm" style="color:#64748b;"><use href="#i-search"/></svg>
-              <input type="text" class="custom-dd-search" id="ddSearch_model" placeholder="Model axtar..." oninput="filterDropdownList('model')" />
-            </div>
-            <div class="custom-dd-list" id="ddList_model"></div>
-          </div>
-        </div>
+        <select class="form-select" id="fCity" onchange="applyFilters()">
+          <option value="">Bütün Şəhər / Rayonlar</option>
+          <option value="Bakı — Yasamal">Bakı — Yasamal</option>
+          <option value="Bakı — Nəsimi">Bakı — Nəsimi</option>
+          <option value="Bakı — Nərimanov">Bakı — Nərimanov</option>
+          <option value="Bakı — Xətai">Bakı — Xətai</option>
+          <option value="Bakı — Binəqədi">Bakı — Binəqədi</option>
+          <option value="Bakı — Nizami">Bakı — Nizami</option>
+          <option value="Bakı — Səbail">Bakı — Səbail</option>
+          <option value="Bakı — Sabunçu">Bakı — Sabunçu</option>
+          <option value="Bakı — Suraxanı">Bakı — Suraxanı</option>
+          <option value="Bakı — Xəzər">Bakı — Xəzər</option>
+          <option value="Sumqayıt">Sumqayıt</option>
+          <option value="Xırdalan">Xırdalan</option>
+          <option value="Gəncə">Gəncə</option>
+        </select>
 
-        <!-- 3. Custom Dark Searchable City Selector -->
-        <div class="filter-field-box" id="ddBox_city">
-          <div class="filter-field-label" data-i18n="lbl_city">Şəhər</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('city', event)">
-            <span id="ddLabel_city" class="placeholder">Bütün şəhərlər</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-search-wrap">
-              <svg class="svg-icon sm" style="color:#64748b;"><use href="#i-search"/></svg>
-              <input type="text" class="custom-dd-search" id="ddSearch_city" placeholder="Şəhər axtar..." oninput="filterDropdownList('city')" />
-            </div>
-            <div class="custom-dd-list" id="ddList_city"></div>
-          </div>
-        </div>
+        <select class="form-select" id="fStatus" onchange="applyFilters()">
+          <option value="">Bütün Statuslar</option>
+          <option value="open">Açıq (Təklif gözləyir)</option>
+          <option value="assigned">Usta seçildi</option>
+          <option value="completed">Tamamlandı</option>
+        </select>
 
-        <!-- 4. Custom Dark Body Type Selector -->
-        <div class="filter-field-box" id="ddBox_body">
-          <div class="filter-field-label" data-i18n="lbl_body">Ban növü</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('body', event)">
-            <span id="ddLabel_body" class="placeholder">Bütün ban növləri</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-list" id="ddList_body"></div>
-          </div>
-        </div>
+        <input type="text" class="form-input" id="fSearch" placeholder="Sorğu axtar (məs: kombi, su axıdır...)" oninput="applyFilters()" />
 
-        <!-- 5. Price Range (Min - Max) -->
-        <div class="filter-field-box">
-          <div class="filter-field-label" data-i18n="lbl_price">Qiymət (Min - Maks)</div>
-          <div class="range-inputs-inline">
-            <input type="number" class="clean-num-input" id="fPriceMin" placeholder="Min ₼" oninput="applyFilters()" />
-            <div class="range-divider"></div>
-            <input type="number" class="clean-num-input" id="fPriceMax" placeholder="Maks ₼" oninput="applyFilters()" />
-          </div>
-        </div>
-
-        <!-- 6. Year Range (Min - Max) -->
-        <div class="filter-field-box">
-          <div class="filter-field-label" data-i18n="lbl_year">Buraxılış ili</div>
-          <div class="range-inputs-inline">
-            <input type="number" class="clean-num-input" id="fYearMin" placeholder="Min il" oninput="applyFilters()" />
-            <div class="range-divider"></div>
-            <input type="number" class="clean-num-input" id="fYearMax" placeholder="Maks il" oninput="applyFilters()" />
-          </div>
-        </div>
-
-        <!-- 7. Fuel Type Custom Dropdown -->
-        <div class="filter-field-box" id="ddBox_fuel">
-          <div class="filter-field-label" data-i18n="lbl_fuel">Yanacaq növü</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('fuel', event)">
-            <span id="ddLabel_fuel" class="placeholder">Hamısı</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-list" id="ddList_fuel"></div>
-          </div>
-        </div>
-
-        <!-- 8. Transmission Custom Dropdown -->
-        <div class="filter-field-box" id="ddBox_gear">
-          <div class="filter-field-label" data-i18n="lbl_gear">Sürətlər qutusu</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('gear', event)">
-            <span id="ddLabel_gear" class="placeholder">Hamısı</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-list" id="ddList_gear"></div>
-          </div>
-        </div>
-
-        <!-- 9. Max Mileage -->
-        <div class="filter-field-box">
-          <div class="filter-field-label" data-i18n="lbl_mileage">Maks. Yürüş (km)</div>
-          <input type="number" class="clean-num-input" id="fMileageMax" placeholder="Məs: 75000 km" oninput="applyFilters()" />
-        </div>
-
-        <!-- 10. Keyword / VIN Search -->
-        <div class="filter-field-box filter-span-2">
-          <div class="filter-field-label" data-i18n="lbl_search">Açar söz və ya VIN kod</div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg class="svg-icon sm" style="color:#64748b;"><use href="#i-search"/></svg>
-            <input type="text" class="clean-num-input" id="fSearch" placeholder="Məs: Bezkraska, M5, Li L9, Improtex, VIN kod..." oninput="applyFilters()" />
-          </div>
-        </div>
-
-        <!-- 11. Custom Dark Sort Selector -->
-        <div class="filter-field-box" id="ddBox_sort">
-          <div class="filter-field-label" data-i18n="lbl_sort">Çeşidləmə</div>
-          <div class="custom-dd-trigger" onclick="toggleCustomDropdown('sort', event)">
-            <span id="ddLabel_sort">Əvvəlcə Canlı & VIP</span>
-            <svg class="custom-dd-chevron"><use href="#i-chevron"/></svg>
-          </div>
-          <div class="custom-dd-menu" onclick="event.stopPropagation()">
-            <div class="custom-dd-list" id="ddList_sort"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Filter Chips -->
-      <div class="filter-bottom-bar">
-        <div class="quick-toggles">
-          <button class="chip-toggle" id="chipLive" onclick="toggleChip('live')">
-            <svg class="svg-icon sm" style="color:#dc2626;"><use href="#i-broadcast"/></svg>
-            <span data-i18n="chip_live">Hazırda Canlı Yayımda</span>
-          </button>
-          <button class="chip-toggle" id="chipCredit" onclick="toggleChip('credit')">
-            <svg class="svg-icon sm"><use href="#i-bank"/></svg>
-            <span data-i18n="chip_credit">Kreditlə</span>
-          </button>
-          <button class="chip-toggle" id="chipBarter" onclick="toggleChip('barter')">
-            <svg class="svg-icon sm"><use href="#i-refresh"/></svg>
-            <span data-i18n="chip_barter">Barter mümkündür</span>
-          </button>
-          <button class="chip-toggle" id="chipVip" onclick="toggleChip('vip')">
-            <svg class="svg-icon sm" style="color:#f59e0b;"><use href="#i-crown"/></svg>
-            <span data-i18n="chip_vip">Yalnız VIP</span>
-          </button>
-        </div>
-
-        <div style="font-size:0.88rem;font-weight:700;color:#cbd5e1;display:flex;align-items:center;gap:6px;">
-          <span data-i18n="found_count_prefix">Tapıldı:</span>
-          <span id="resultsCount" style="color:#2563eb;font-size:1.05rem;font-weight:900;">12</span>
-          <span data-i18n="found_count_suffix">avtomobil</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- LIVE SHOWROOM STRIP -->
-    <section id="liveStripSection">
-      <div class="section-header">
-        <div class="section-title">
-          <span class="live-pill-mini" style="font-size:0.78rem;padding:5px 11px;">
-            <svg class="svg-icon sm"><use href="#i-broadcast"/></svg>
-            LIVE SHOWROOM
-          </span>
-          <span data-i18n="sec_live_title">Hazırda Canlı Yayımda Olan Avtomobillər</span>
-        </div>
-        <button class="btn-secondary" style="padding:8px 14px;font-size:0.82rem;" onclick="openShowroomModePicker()">
-          <svg class="svg-icon sm"><use href="#i-video"/></svg>
-          <span data-i18n="btn_broadcast_yours">Canlı Yayıma Başla</span>
+        <button type="button" class="btn-secondary" onclick="resetFilters()" style="justify-content:center;">
+          Sıfırla
         </button>
       </div>
-      <div class="live-strip" id="liveStripGrid"></div>
     </section>
 
-    <!-- MAIN CAR LISTINGS GRID (Standard + VIP + Live Listings) -->
-    <section id="listingsSection">
+    <!-- TAB 1: SERVICE REQUESTS GRID -->
+    <section id="requestsSection">
       <div class="section-header">
-        <div class="section-title">
-          <div class="filter-icon-box" style="width:34px;height:34px;">
-            <svg class="svg-icon"><use href="#i-car"/></svg>
-          </div>
-          <span id="listingsHeading" data-i18n="sec_all_listings">VIP və Standart Avtomobil Elanları</span>
+        <div>
+          <h2 style="font-size:1.3rem;font-weight:800;">Müştəri Sorğuları (Təklif Gözləyənlər)</h2>
+          <p style="font-size:0.84rem;color:var(--text-muted);">Sorğuya klikləyərək gələn qiymət təkliflərinə baxa və ya usta kimi öz qiymətinizi göndərə bilərsiniz.</p>
+        </div>
+        <div style="font-size:0.86rem;font-weight:700;color:#334155;">
+          Tapıldı: <span id="resultsCount" style="color:#2563eb;font-weight:900;">0</span> sorğu
         </div>
       </div>
-      <div class="cars-grid" id="carsGrid"></div>
+      <div class="cards-grid" id="requestsGrid"></div>
     </section>
 
-    <!-- AVTOSALONLAR SECTION -->
-    <section id="salonsSection" style="display:none;">
+    <!-- TAB 2: MASTERS & SERVICES DIRECTORY -->
+    <section id="mastersSection" style="display:none;">
       <div class="section-header">
-        <div class="section-title">
-          <div class="filter-icon-box" style="width:34px;height:34px;">
-            <svg class="svg-icon"><use href="#i-salon"/></svg>
-          </div>
-          <span data-i18n="sec_salons_title">Rəsmi Avtosalonlar və Dilerlər</span>
+        <div>
+          <h2 style="font-size:1.3rem;font-weight:800;">Peşəkar Ustalar və Servis Mərkəzləri</h2>
+          <p style="font-size:0.84rem;color:var(--text-muted);">Qeydiyyatdan keçmiş təsdiqli ustalar, reytinqlər və tamamlanmış sifarişlər.</p>
         </div>
+        <button type="button" class="btn-primary" onclick="openAuthModal('register')">+ Usta Kimi Qeydiyyatdan Keç</button>
       </div>
-      <div class="salons-grid" id="salonsGrid"></div>
+      <div class="cards-grid" id="mastersGrid"></div>
     </section>
 
-    <!-- PRICING SECTION -->
+    <!-- TAB 3: HOW IT WORKS & PRICING -->
     <section id="pricingSection" style="display:none;">
       <div class="section-header">
-        <div class="section-title">
-          <div class="filter-icon-box" style="width:34px;height:34px;">
-            <svg class="svg-icon"><use href="#i-crown"/></svg>
-          </div>
-          <span data-i18n="sec_pricing_title">Sərfəli Elan və Vitrin Paketləri</span>
+        <div>
+          <h2 style="font-size:1.35rem;font-weight:800;">Şəffaf Tariflər və Qazanc Modeli</h2>
+          <p style="font-size:0.86rem;color:var(--text-muted);">Müştərilər üçün tamamilə pulsuzdur. Ustalar yalnız real müştəri sifarişlərinə təklif göndərdikdə ödəniş edirlər.</p>
         </div>
       </div>
-      <p style="color:var(--text-muted);margin-bottom:22px;" data-i18n="sec_pricing_desc">
-        AvtoLive.az satıcılar üçün həm pulsuz Standart Elan və Canlı Yayım imkanı yaradır, həm də digər saytlardan 55% daha ucuz VIP vitrin paketləri təklif edir.
-      </p>
 
       <div class="pricing-grid">
         <div class="price-card">
           <div>
-            <span class="badge-tier badge-new">PULSUZ / FREE</span>
-            <h3 style="font-size:1.25rem;margin-top:10px;" data-i18n="pkg_std_title">Standart Elan + Canlı</h3>
-            <div class="old-competitor-price" data-i18n="pkg_std_old">Digər saytlarda: Limitli 15 AZN</div>
-            <div class="our-price">0 ₼</div>
-            <ul class="feature-list">
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> 30 gün aktiv standart foto elan</li>
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> İstəyə bağlı Pulsuz Canlı Yayım</li>
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> 21 ədəd HD foto qalereya</li>
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> Alıcılarla mesajlaşma və sual-cavab</li>
+            <span class="badge-status-open">MÜŞTƏRİLƏR ÜÇÜN</span>
+            <h3 style="font-size:1.2rem;font-weight:800;margin-top:10px;">Müştəri Paketi</h3>
+            <div class="price-big" style="margin:10px 0;">0 ₼ <span style="font-size:0.85rem;font-weight:600;color:#64748b;">/ həmişə</span></div>
+            <p style="font-size:0.84rem;color:#475569;margin-bottom:14px;">İstənilən sayda təmir və servis sorğusu yaradın, ustalardan gələn qiymətləri müqayisə edin.</p>
+            <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;font-size:0.84rem;color:#334155;">
+              <li>✔ Limitsiz sorğu və foto yükləmə</li>
+              <li>✔ Ustalardan 5 dəqiqədə qiymət təklifi</li>
+              <li>✔ Reytinq və rəylərə əsasən seçim</li>
             </ul>
           </div>
-          <button class="btn-secondary" style="width:100%;justify-content:center;" onclick="openPostModal(false, 'standard')">Pulsuz Elan Yerləşdir</button>
+          <button type="button" class="btn-emerald" onclick="openNewRequestModal()" style="width:100%;justify-content:center;">Pulsuz Sorğu Yarat</button>
         </div>
 
         <div class="price-card">
           <div>
-            <span class="badge-tier" style="background:#2563eb;color:#fff;">İRƏLİ ÇƏK</span>
-            <h3 style="font-size:1.25rem;margin-top:10px;" data-i18n="pkg_fwd_title">Axtarışda İrəli Çək</h3>
-            <div class="old-competitor-price">Digər saytlarda: 3.00 ₼</div>
-            <div class="our-price">1 ₼ <span style="font-size:0.85rem;color:#10b981;">(-66%)</span></div>
-            <ul class="feature-list">
-              <li><svg class="svg-icon sm" style="color:#3b82f6;"><use href="#i-check"/></svg> Elanı siyahının ən üstünə qaldırır</li>
-              <li><svg class="svg-icon sm" style="color:#3b82f6;"><use href="#i-check"/></svg> Canlı Yayım bildirişi göndərir</li>
-              <li><svg class="svg-icon sm" style="color:#3b82f6;"><use href="#i-check"/></svg> 3 dəfə daha çox baxış sayı</li>
+            <span class="badge-cat">USTALAR ÜÇÜN — TƏKLİF BAŞINA</span>
+            <h3 style="font-size:1.2rem;font-weight:800;margin-top:10px;">Standart Usta</h3>
+            <div class="price-big" style="margin:10px 0;">2 ₼ <span style="font-size:0.85rem;font-weight:600;color:#64748b;">/ təklif</span></div>
+            <p style="font-size:0.84rem;color:#475569;margin-bottom:14px;">Aylıq öhdəlik yoxdur — yalnız sizə uyğun olan müştəri sorğusuna qiymət təklifi göndərdikdə balansdan 2 ₼ çıxılır.</p>
+            <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;font-size:0.84rem;color:#334155;">
+              <li>✔ Yeni usta qeydiyyatında <strong>10 ₼ bonus balans</strong> (5 pulsuz təklif)</li>
+              <li>✔ Müştəri ilə birbaşa telefon əlaqəsi</li>
+              <li>✔ Usta profili və reytinq toplama</li>
             </ul>
           </div>
-          <button class="btn-secondary" style="width:100%;justify-content:center;" onclick="openPostModal(false, 'forward')">1 ₼ ilə Seç</button>
+          <button type="button" class="btn-primary" onclick="openAuthModal('register')" style="width:100%;justify-content:center;">Usta Hesabı Aç (+10 ₼ Bonus)</button>
         </div>
 
         <div class="price-card featured">
           <div>
-            <span class="badge-tier badge-vip"><svg class="svg-icon sm"><use href="#i-crown"/></svg> VIP VİTRİN</span>
-            <h3 style="font-size:1.25rem;margin-top:10px;" data-i18n="pkg_vip_title">VIP Vitrin + Live Boost</h3>
-            <div class="old-competitor-price">Digər saytlarda: 20.00 ₼</div>
-            <div class="our-price">9 ₼ <span style="font-size:0.85rem;color:#10b981;">(-55%)</span></div>
-            <ul class="feature-list">
-              <li><svg class="svg-icon sm" style="color:#f59e0b;"><use href="#i-check"/></svg> Ana səhifə VIP vitrinində 10 gün</li>
-              <li><svg class="svg-icon sm" style="color:#f59e0b;"><use href="#i-check"/></svg> Canlı Yayımlar bölməsində ön sıra</li>
-              <li><svg class="svg-icon sm" style="color:#f59e0b;"><use href="#i-check"/></svg> Xüsusi VIP nişanı və qızılı çərçivə</li>
+            <span class="pro-badge">USTA & SERVİS PRO — LİMİTSİZ</span>
+            <h3 style="font-size:1.2rem;font-weight:800;margin-top:10px;">PRO Usta Abunəliyi</h3>
+            <div class="price-big" style="margin:10px 0;color:#1d4ed8;">29 ₼ <span style="font-size:0.85rem;font-weight:600;color:#64748b;">/ ay</span></div>
+            <p style="font-size:0.84rem;color:#475569;margin-bottom:14px;">Aktiv ustalar və servis mərkəzləri üçün 30 gün ərzində komissiyasız (0 ₼) limitsiz qiymət təklifi göndərmə imkanı.</p>
+            <ul style="list-style:none;display:flex;flex-direction:column;gap:8px;font-size:0.84rem;color:#334155;">
+              <li>✔ <strong>Limitsiz qiymət təklifi</strong> (hər təklif 0 ₼)</li>
+              <li>✔ Ustalar siyahısında ən üstdə <strong>PRO USTA</strong> nişanı</li>
+              <li>✔ Müştəri təkliflərində ön sırada görünmə</li>
             </ul>
           </div>
-          <button class="btn-primary" style="width:100%;justify-content:center;" onclick="openPostModal(false, 'vip')">VIP Elan Yerləşdir (9 ₼)</button>
-        </div>
-
-        <div class="price-card">
-          <div>
-            <span class="badge-tier badge-premium"><svg class="svg-icon sm"><use href="#i-salon"/></svg> AVTOSALON PRO</span>
-            <h3 style="font-size:1.25rem;margin-top:10px;" data-i18n="pkg_salon_title">Avtosalon Biznes Paketi</h3>
-            <div class="old-competitor-price">Digər saytlarda: 350 ₼ / ay</div>
-            <div class="our-price">149 ₼ <span style="font-size:0.85rem;color:#10b981;">/ ay</span></div>
-            <ul class="feature-list">
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> Rəsmi Avtosalon səhifəsi və loqosu</li>
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> Limitsiz avtomobil elanı və canlı yayım</li>
-              <li><svg class="svg-icon sm" style="color:#10b981;"><use href="#i-check"/></svg> Hər ay 25 ədəd VIP elan hədiyyə</li>
-            </ul>
-          </div>
-          <button class="btn-success" style="width:100%;justify-content:center;" onclick="openAuthModal('register')">Avtosalon Hesabı Aç</button>
+          <button type="button" class="btn-primary" onclick="upgradeToProMaster()" style="width:100%;justify-content:center;">PRO Paketi Aktivləşdir (29 ₼)</button>
         </div>
       </div>
     </section>
-
   </main>
 
-  <!-- MODAL 1: CAR LISTING DETAIL & LIVE SHOWROOM -->
-  <div class="modal-backdrop" id="liveDetailModal">
-    <div class="modal-window">
+  <!-- MODAL 1: CREATE NEW SERVICE REQUEST -->
+  <div class="modal-backdrop" id="newRequestModal">
+    <div class="modal-window" style="max-width:640px;">
       <div class="modal-header">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="live-pill-mini" id="modalLiveBadge">STANDART ELAN</span>
-          <h3 id="modalCarTitle" style="font-size:1.2rem;font-weight:800;">BMW M5 Competition (2023)</h3>
-        </div>
-        <button class="close-btn" onclick="closeModal('liveDetailModal')">✕</button>
+        <h3 style="font-size:1.08rem;font-weight:800;">Yeni Usta / Servis Sorğusu Yarat</h3>
+        <button type="button" class="close-btn" onclick="closeModal('newRequestModal')">✕</button>
       </div>
-      <div id="modalBodyContent"></div>
-    </div>
-  </div>
-
-  <!-- MODAL 2: POST NEW CAR AD -->
-  <div class="modal-backdrop" id="postAdModal">
-    <div class="modal-window" style="max-width:780px;">
-      <div class="modal-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="filter-icon-box" style="width:32px;height:32px;">
-            <svg class="svg-icon"><use href="#i-car"/></svg>
-          </div>
-          <h3 style="font-size:1.15rem;font-weight:800;" data-i18n="modal_post_title">Yeni Avtomobil Elanı Yerləşdir</h3>
-        </div>
-        <button class="close-btn" onclick="closeModal('postAdModal')">✕</button>
-      </div>
-      <form id="postAdForm" onsubmit="submitNewListing(event)" class="post-ad-form">
-        <div class="post-form-grid">
-          <div class="form-control">
-            <label data-i18n="lbl_brand">Marka *</label>
-            <select class="form-select" id="pBrand" onchange="onPostBrandChange()" required></select>
-          </div>
-          <div class="form-control">
-            <label data-i18n="lbl_model">Model *</label>
-            <select class="form-select" id="pModel" required></select>
-          </div>
-          <div class="form-control">
-            <label data-i18n="lbl_year">Buraxılış ili *</label>
-            <input type="number" class="form-input" id="pYear" value="2024" min="1980" max="2027" required />
-          </div>
-
-          <div class="form-control">
-            <label data-i18n="lbl_body">Ban növü *</label>
-            <select class="form-select" id="pBody">
-              <option value="Sedan">Sedan</option>
-              <option value="Offroader / SUV">Offroader / SUV</option>
-              <option value="Kupe">Kupe</option>
-              <option value="Liftbek">Liftbek</option>
-              <option value="Hetçbek">Hetçbek</option>
-              <option value="Universal">Universal</option>
-              <option value="Pikap">Pikap</option>
+      <form onsubmit="submitServiceRequest(event)" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Xidmət Kateqoriyası *</label>
+            <select class="form-select" id="reqCategory" required>
+              <option value="Kombi və İsitmə">Kombi və İsitmə</option>
+              <option value="Kondisioner və Havalandırma">Kondisioner və Havalandırma</option>
+              <option value="Santexnika">Santexnika</option>
+              <option value="Elektrik">Elektrik</option>
+              <option value="Məişət Texnikası">Məişət Texnikası (Paltaryuyan/Soyuducu)</option>
+              <option value="Avtoservis və Evakuator">Avtoservis və Evakuator</option>
+              <option value="Ev Təmiri və Rəngsaz">Ev Təmiri və Rəngsaz</option>
+              <option value="Mebel və Qapı-Pəncərə">Mebel və Qapı-Pəncərə</option>
+              <option value="Təmizlik Xidməti">Təmizlik Xidməti</option>
+              <option value="Digər">Digər</option>
             </select>
           </div>
-          <div class="form-control">
-            <label data-i18n="lbl_fuel">Yanacaq növü *</label>
-            <select class="form-select" id="pFuel">
-              <option value="Benzin">Benzin</option>
-              <option value="Dizel">Dizel</option>
-              <option value="Hibrid">Hibrid</option>
-              <option value="Plug-in Hibrid">Plug-in Hibrid</option>
-              <option value="Elektro">Elektro</option>
-            </select>
-          </div>
-          <div class="form-control">
-            <label data-i18n="lbl_gear">Sürətlər qutusu *</label>
-            <select class="form-select" id="pGear">
-              <option value="Avtomat">Avtomat</option>
-              <option value="Mexaniki">Mexaniki</option>
-              <option value="Robot">Robot</option>
-              <option value="Variator">Variator</option>
-            </select>
-          </div>
-
-          <div class="form-control">
-            <label>Mühərrik həcmi (L)</label>
-            <input type="number" step="0.1" class="form-input" id="pEngine" value="2.0" required />
-          </div>
-          <div class="form-control">
-            <label>At gücü (a.g.)</label>
-            <input type="number" class="form-input" id="pHp" value="250" required />
-          </div>
-          <div class="form-control">
-            <label data-i18n="lbl_mileage">Yürüş (km)</label>
-            <input type="number" class="form-input" id="pMileage" value="0" min="0" required />
-          </div>
-
-          <div class="form-control">
-            <label>Qiymət (AZN) *</label>
-            <input type="number" class="form-input" id="pPrice" placeholder="Məs: 54000" required />
-          </div>
-          <div class="form-control">
-            <label data-i18n="lbl_city">Şəhər *</label>
-            <select class="form-select" id="pCity">
-              <option value="Bakı">Bakı</option>
-              <option value="Gəncə">Gəncə</option>
+          <div>
+            <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Şəhər / Rayon *</label>
+            <select class="form-select" id="reqCity" required>
+              <option value="Bakı — Yasamal">Bakı — Yasamal</option>
+              <option value="Bakı — Nəsimi">Bakı — Nəsimi</option>
+              <option value="Bakı — Nərimanov">Bakı — Nərimanov</option>
+              <option value="Bakı — Xətai">Bakı — Xətai</option>
+              <option value="Bakı — Binəqədi">Bakı — Binəqədi</option>
+              <option value="Bakı — Nizami">Bakı — Nizami</option>
+              <option value="Bakı — Səbail">Bakı — Səbail</option>
+              <option value="Bakı — Sabunçu">Bakı — Sabunçu</option>
+              <option value="Bakı — Suraxanı">Bakı — Suraxanı</option>
+              <option value="Bakı — Xəzər">Bakı — Xəzər</option>
               <option value="Sumqayıt">Sumqayıt</option>
               <option value="Xırdalan">Xırdalan</option>
-              <option value="Lənkəran">Lənkəran</option>
-              <option value="Mingəçevir">Mingəçevir</option>
-              <option value="Naxçıvan">Naxçıvan</option>
-              <option value="Şəki">Şəki</option>
-              <option value="Quba">Quba</option>
-            </select>
-          </div>
-          <div class="form-control">
-            <label>Rəng</label>
-            <input type="text" class="form-input" id="pColor" value="Qara (Metolik)" required />
-          </div>
-
-          <div class="form-control">
-            <label>Satıcı Adı *</label>
-            <input type="text" class="form-input" id="pSellerName" placeholder="Ad və Soyad" required />
-          </div>
-          <div class="form-control">
-            <label>Əlaqə Nömrəsi *</label>
-            <input type="text" class="form-input" id="pSellerPhone" value="+994 " placeholder="+994" required />
-          </div>
-          <div class="form-control">
-            <label>Elan Paketi</label>
-            <select class="form-select" id="pTier">
-              <option value="standard">Standart Elan (0 ₼ - Pulsuz)</option>
-              <option value="premium">Premium Vitrin (5 ₼)</option>
-              <option value="vip">VIP Vitrin + Ön Sıra (9 ₼)</option>
+              <option value="Gəncə">Gəncə</option>
             </select>
           </div>
         </div>
 
-        <div class="form-control" style="margin-top:16px;">
-          <label>Avtomobil Şəkilləri (Cihazdan və ya Telefondan Seç — Çoxlu Şəkil Yüklə)</label>
-          <div class="photo-upload-zone" id="photoUploadZone" onclick="document.getElementById('pFileInput').click()">
-            <input type="file" id="pFileInput" accept="image/*" multiple style="display:none;" onchange="handleDevicePhotosSelected(event)" />
-            <div class="photo-upload-icon">
-              <svg class="svg-icon lg"><use href="#i-plus"/></svg>
-            </div>
-            <div class="photo-upload-title">Kompüter və ya Telefondan Şəkil Seçin</div>
-            <div class="photo-upload-sub">JPG, PNG, WEBP, HEIC dəstəklənir (1-dən 12-yə qədər şəkil seçə bilərsiniz)</div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Qısa Başlıq (Problem nədir?) *</label>
+          <input type="text" class="form-input" id="reqTitle" placeholder="Məs: Kombi su axıdır və E1 xətası verir" required />
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Təcili Dərəcəsi *</label>
+            <select class="form-select" id="reqUrgency">
+              <option value="Təcili — Bu gün">🔥 Təcili — Bu gün</option>
+              <option value="Standart — 1-2 günə">📅 Standart — 1-2 günə</option>
+              <option value="Planlı — Bu həftə">🕒 Planlı — Bu həftə</option>
+            </select>
           </div>
-          <div class="photo-preview-grid" id="photoPreviewGrid"></div>
+          <div>
+            <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Təxmini Büdcəniz (AZN, istəyə bağlı)</label>
+            <input type="number" class="form-input" id="reqBudget" placeholder="Məs: 40 (boş qala bilər)" />
+          </div>
         </div>
 
-        <div class="form-control" style="margin-top:14px;">
-          <label>Ətraflı Məlumat</label>
-          <textarea class="form-input" id="pDesc" rows="3" placeholder="Avtomobilin təchizatı, boya vəziyyəti, servis tarixçəsi və qiymət şərtləri..."></textarea>
+        <div>
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Ətraflı Məlumat *</label>
+          <textarea class="form-textarea" id="reqDesc" rows="3" placeholder="Problemi ətraflı yazın ki, ustalar dəqiq qiymət təklif etsinlər..." required></textarea>
         </div>
 
-        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;padding:14px;background:#f8fafc;border:1px solid var(--border-color);border-radius:12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.86rem;">
-            <input type="checkbox" id="pCredit" /> Kreditlə satılır
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.86rem;">
-            <input type="checkbox" id="pBarter" /> Barter mümkündür
-          </label>
-          
+        <div>
+          <label style="font-size:0.8rem;font-weight:700;display:block;margin-bottom:4px;">Problemin Şəkilləri (İstəyə bağlı, maks. 5 foto)</label>
+          <input type="file" id="reqPhotoInput" accept="image/*" multiple onchange="handlePhotoFiles(this.files)" class="form-input" />
+          <div id="uploadedPhotosPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
         </div>
 
-        
-
-        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
-          <button type="button" class="btn-secondary" onclick="closeModal('postAdModal')">Ləğv et</button>
-          <button type="submit" class="btn-primary">Elanı Dərc Et</button>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+          <button type="button" class="btn-secondary" onclick="closeModal('newRequestModal')">Ləğv et</button>
+          <button type="submit" class="btn-emerald">Sorğunu Dərc Et (Pulsuz)</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL 3: USER LOGIN & REGISTRATION -->
+  <!-- MODAL 2: REQUEST DETAIL & BIDS -->
+  <div class="modal-backdrop" id="requestDetailModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="badge-cat" id="detailModalBadge">SORĞU</span>
+          <h3 style="font-size:1.05rem;font-weight:800;" id="detailModalTitle">Sorğu Detalları</h3>
+        </div>
+        <button type="button" class="close-btn" onclick="closeModal('requestDetailModal')">✕</button>
+      </div>
+      <div style="padding:20px;" id="requestDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: AUTH & PERSONAL CABINET (HESABIM) -->
   <div class="modal-backdrop" id="authModal">
     <div class="modal-window" style="max-width:480px;">
       <div class="modal-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div class="filter-icon-box" style="width:32px;height:32px;">
-            <svg class="svg-icon"><use href="#i-user"/></svg>
-          </div>
-          <h3 style="font-size:1.1rem;font-weight:800;" id="authModalTitle">Şəxsi Kabinet — avtolive.az</h3>
-        </div>
-        <button class="close-btn" onclick="closeModal('authModal')">✕</button>
+        <h3 style="font-size:1.05rem;font-weight:800;" id="authModalTitle">Şəxsi Kabinet — TəklifAl.az</h3>
+        <button type="button" class="close-btn" onclick="closeModal('authModal')">✕</button>
       </div>
-      <div style="padding:24px;" id="authModalBody"></div>
+      <div style="padding:22px;" id="authModalBody"></div>
     </div>
   </div>
 
-
-  <!-- MODAL 4: EDIT LISTING -->
-  <div class="modal-backdrop" id="editListingModal">
-    <div class="modal-window" style="max-width:520px;">
-      <div class="modal-header">
-        <h3 style="font-size:1.05rem;font-weight:800;">Elanı Redaktə Et</h3>
-        <button class="close-btn" onclick="closeModal('editListingModal')">✕</button>
-      </div>
-      <div style="padding:22px;" id="editListingBody"></div>
-    </div>
-  </div>
-
-  <!-- MODAL 5: PLATFORM INFO (FOOTER PAGES) -->
+  <!-- MODAL 4: FOOTER INFO -->
   <div class="modal-backdrop" id="infoModal">
-    <div class="modal-window" style="max-width:600px;">
+    <div class="modal-window" style="max-width:580px;">
       <div class="modal-header">
         <h3 style="font-size:1.05rem;font-weight:800;" id="infoModalTitle">Məlumat</h3>
-        <button class="close-btn" onclick="closeModal('infoModal')">✕</button>
+        <button type="button" class="close-btn" onclick="closeModal('infoModal')">✕</button>
       </div>
-      <div style="padding:24px;color:#334155;font-size:0.92rem;line-height:1.7;" id="infoModalBody"></div>
+      <div style="padding:22px;color:#334155;font-size:0.92rem;line-height:1.7;" id="infoModalBody"></div>
     </div>
   </div>
-
 
   <!-- FULLSCREEN PHOTO LIGHTBOX -->
   <div class="photo-lightbox" id="photoLightbox" onclick="if(event.target===this) closePhotoLightbox()">
-    <div class="lightbox-topbar">
+    <div style="display:flex;justify-content:space-between;align-items:center;color:#fff;font-weight:700;">
       <span id="lightboxCounter">1 / 1</span>
-      <button type="button" class="lightbox-close-btn" onclick="closePhotoLightbox()">✕</button>
+      <button type="button" class="close-btn" onclick="closePhotoLightbox()">✕</button>
     </div>
-    <div class="lightbox-stage" id="lightboxStage">
-      <button type="button" class="gallery-arrow-btn prev" onclick="stepLightbox(-1)">‹</button>
-      <img id="lightboxImg" src="" alt="Tam ekran foto" />
-      <button type="button" class="gallery-arrow-btn next" onclick="stepLightbox(1)">›</button>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:12px;overflow:hidden;">
+      <button type="button" class="close-btn" onclick="stepLightbox(-1)">‹</button>
+      <img id="lightboxImg" src="" alt="Tam ekran foto" style="max-width:88vw;max-height:78vh;object-fit:contain;border-radius:10px;" />
+      <button type="button" class="close-btn" onclick="stepLightbox(1)">›</button>
     </div>
-    <div class="lightbox-thumbs" id="lightboxThumbs"></div>
-  </div>
-
-
-  <!-- LIVE ORIENTATION PICKER MODAL -->
-  <div class="modal-backdrop" id="liveModeModal">
-    <div class="modal-window" style="max-width:440px;">
-      <div class="modal-header">
-        <h3 style="font-size:1.05rem;font-weight:800;">Canlı Yayım Formatını Seçin</h3>
-        <button class="close-btn" onclick="closeModal('liveModeModal')">✕</button>
-      </div>
-      <div style="padding:20px;">
-        <p style="font-size:0.85rem;color:#475569;margin-bottom:8px;">
-          Canlı yayımınızın görünüm formatını seçin (yayın zamanı da dəyişə bilərsiniz):
-        </p>
-        <div class="live-mode-grid">
-          <div class="live-mode-option selected" id="modeOptVertical" onclick="selectLiveOrientation('vertical')">
-            <div style="font-size:1.7rem;margin-bottom:6px;">📱</div>
-            <strong style="display:block;color:#0f172a;font-size:0.92rem;">Dikey (9:16)</strong>
-            <span style="font-size:0.75rem;color:#64748b;">TikTok / Instagram stili</span>
-          </div>
-          <div class="live-mode-option" id="modeOptHorizontal" onclick="selectLiveOrientation('horizontal')">
-            <div style="font-size:1.7rem;margin-bottom:6px;">🖥️</div>
-            <strong style="display:block;color:#0f172a;font-size:0.92rem;">Yatay (16:9)</strong>
-            <span style="font-size:0.75rem;color:#64748b;">Geniş ekran / Masaüstü</span>
-          </div>
-        </div>
-        <button type="button" class="btn-primary btn-live-red" onclick="confirmStartLiveWithMode()" style="width:100%;justify-content:center;padding:12px;">
-          Canlı Yayımı Başlat
-        </button>
-      </div>
-    </div>
-  </div>
-
-
-  <!-- SHOWROOM LIVE STREAM MODAL (SALONS / GALLERIES / MEMBERS) -->
-  <div class="modal-backdrop" id="showroomModal">
-    <div class="modal-window" style="max-width:980px;width:96vw;">
-      <div class="modal-header">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <span class="live-ring-badge" style="position:static;padding:4px 10px;font-size:0.74rem;" id="showroomLiveBadge">LIVE SHOWROOM</span>
-          <h3 style="font-size:1.02rem;font-weight:800;" id="showroomModalTitle">Canlı Avto Vitrin</h3>
-        </div>
-        <button class="close-btn" onclick="closeShowroomModal()">✕</button>
-      </div>
-      <div style="padding:18px;" id="showroomModalBody"></div>
-    </div>
+    <div id="lightboxThumbs" style="display:flex;gap:8px;justify-content:center;overflow-x:auto;"></div>
   </div>
 
   <!-- Toast Container -->
@@ -842,11 +415,11 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
+    <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:18px;">
       <div>
-        <img src="./logo.svg?v=20261127_v28" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
-        <p style="color:var(--text-muted);font-size:0.84rem;">
-          © 2026 avtolive.az — Standart Avtomobil Elanları və Canlı Yayım Platforması.
+        <img src="./logo.svg?v=20261127_ta1" alt="TəklifAl.az" style="height:40px;margin-bottom:6px;" />
+        <p style="font-size:0.83rem;color:var(--text-muted);">
+          © 2026 TəklifAl.az — Azərbaycanın Usta və Servis Qiymət Hərracı Platforması.
         </p>
       </div>
       <div class="footer-links">
@@ -858,9 +431,6 @@
     </div>
   </footer>
 
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="./seed_data.js?v=20261127_v28"></script>
-  <script src="./brands_models.js?v=20261127_v28"></script>
-  <script src="./app.js?v=20261127_v28"></script>
+  <script src="./app.js?v=20261127_ta1"></script>
 </body>
 </html>
