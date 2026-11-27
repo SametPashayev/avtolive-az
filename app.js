@@ -767,6 +767,57 @@ function renderLiveStrip() {
   `).join("");
 }
 
+function applyFilters() {
+  const getVal = id => (document.getElementById(id)?.value || "").trim();
+  const fBrand = getVal("fBrand");
+  const fModel = getVal("fModel");
+  const fCity = getVal("fCity");
+  const fBody = getVal("fBody");
+  const fFuel = getVal("fFuel");
+  const fGear = getVal("fGear");
+  const pMin = parseFloat(getVal("fPriceMin")) || 0;
+  const pMax = parseFloat(getVal("fPriceMax")) || 0;
+  const yMin = parseInt(getVal("fYearMin")) || 0;
+  const yMax = parseInt(getVal("fYearMax")) || 0;
+  const mMax = parseInt(getVal("fMileageMax")) || 0;
+  const q = getVal("fSearch").toLowerCase();
+  const sort = getVal("fSort") || "featured";
+
+  let list = (state.listings || []).filter(c => {
+    if (state.tab === "favs" && !(state.favorites || []).includes(c.id)) return false;
+    if (state.condition === "new" && !(c.is_new || c.mileage === 0)) return false;
+    if (state.condition === "used" && (c.is_new || c.mileage === 0)) return false;
+    if (fBrand && c.brand !== fBrand) return false;
+    if (fModel && c.model !== fModel) return false;
+    if (fCity && c.city !== fCity) return false;
+    if (fBody && c.body_type !== fBody) return false;
+    if (fFuel && c.fuel_type !== fFuel) return false;
+    if (fGear && c.transmission !== fGear) return false;
+    if (pMin && c.price < pMin) return false;
+    if (pMax && c.price > pMax) return false;
+    if (yMin && c.year < yMin) return false;
+    if (yMax && c.year > yMax) return false;
+    if (mMax && c.mileage > mMax) return false;
+    if (state.chips?.credit && !c.credit) return false;
+    if (state.chips?.barter && !c.barter) return false;
+    if (state.chips?.vip && c.tier !== "vip") return false;
+    if (q) {
+      const hay = `${c.brand} ${c.model} ${c.city} ${c.year} ${c.seller_name || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (sort === "price_asc") list.sort((a, b) => a.price - b.price);
+  else if (sort === "price_desc") list.sort((a, b) => b.price - a.price);
+  else if (sort === "year_desc") list.sort((a, b) => b.year - a.year);
+  else list.sort((a, b) => (b.tier === "vip" ? 1 : 0) - (a.tier === "vip" ? 1 : 0) || b.id - a.id);
+
+  const cntEl = document.getElementById("resultsCount");
+  if (cntEl) cntEl.textContent = list.length;
+  renderCarsGrid(list);
+}
+
 function renderCarsGrid(cars) {
   const grid = document.getElementById("carsGrid");
   const dict = I18N[state.lang];
