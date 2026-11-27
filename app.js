@@ -681,11 +681,11 @@ function renderFeaturedHeroLive() {
       </div>
 
       <div>
-        <div style="font-size:0.81rem;color:#2563eb;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+        <div class="hero-live-seller" style="font-size:0.81rem;color:#e2e8f0;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
           ${iconSvg("salon")} ${featured.seller_name} • ${featured.city}
         </div>
         <h3 style="font-size:1.4rem;font-weight:900;margin-bottom:6px;">
-          ${featured.brand} ${featured.model} (${featured.year}) — ${formatPrice(featured.price)}
+          ${featured.brand} ${featured.model} (${featured.year}) — <span style="white-space:nowrap;">${formatPrice(featured.price)}</span>
         </h3>
         <p style="font-size:0.85rem;color:#cbd5e1;margin-bottom:14px;">
           ${featured.live_title || getDescription(featured).slice(0, 95)}
@@ -1018,18 +1018,19 @@ function openCarDetail(id) {
       <!-- LEFT COLUMN: MEDIA GALLERY / LIVE STUDIO -->
       <div>
         <div class="detail-gallery-stage live-video-pane">
-          ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
-            <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
-          ` : `
-            <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" />
-            ${_galleryPhotos.length > 1 ? `
-              <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
-              <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
-              <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
-            ` : ''}
-          `}
-
-          <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isOwner && car.is_live ? 'flex' : 'none'};"></div>
+          <div class="detail-gallery-media-box">
+            ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
+              <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
+            ` : `
+              <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" />
+              ${_galleryPhotos.length > 1 ? `
+                <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
+                <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
+                <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
+              ` : ''}
+            `}
+            <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isOwner && car.is_live ? 'flex' : 'none'};"></div>
+          </div>
 
           ${(isOwner || car.is_live) ? `
             <div class="live-controls-bar" style="position:static;margin:0;border-radius:0;border-top:1px solid rgba(255,255,255,0.12);background:#0f172a;">
@@ -1071,9 +1072,7 @@ function openCarDetail(id) {
 
         <div class="detail-meta-strip">
           <span>Elan № <strong>${10000 + car.id}</strong></span>
-          <span>•</span>
-          <span>Baxışların sayı: <strong>${car.views || 1}</strong></span>
-          <span>•</span>
+          <span>Baxış: <strong>${car.views || 1}</strong></span>
           <span>Tarix: <strong>${(car.created_at || '2026-11-27').slice(0, 10)}</strong></span>
         </div>
       </div>
@@ -1716,7 +1715,7 @@ function openAuthModal(defaultTab = "login") {
       </div>
       <div style="margin-bottom:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
         <div style="font-weight:800;font-size:0.84rem;color:#0f172a;margin-bottom:8px;">Profil Məlumatları</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="profile-edit-grid">
           <input type="text" class="form-input" id="profNameInput" value="${state.user.full_name || ''}" placeholder="Ad Soyad" />
           <input type="text" class="form-input" id="profPhoneInput" value="${state.user.phone || ''}" placeholder="Telefon" />
         </div>
