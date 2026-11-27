@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261127_v24" />
+  <link rel="stylesheet" href="./styles.css?v=20261127_v25" />
 </head>
 <body>
 
@@ -132,7 +132,7 @@
   <!-- Sticky Navigation Bar -->
   <header class="navbar">
     <div class="brand-logo" onclick="switchTab('all')">
-      <img src="./logo.svg?v=20261127_v24" alt="avtolive.az logo" />
+      <img src="./logo.svg?v=20261127_v25" alt="avtolive.az logo" />
     </div>
 
     <nav class="nav-links">
@@ -782,6 +782,21 @@
     </div>
   </div>
 
+
+  <!-- FULLSCREEN PHOTO LIGHTBOX -->
+  <div class="photo-lightbox" id="photoLightbox" onclick="if(event.target===this) closePhotoLightbox()">
+    <div class="lightbox-topbar">
+      <span id="lightboxCounter">1 / 1</span>
+      <button type="button" class="lightbox-close-btn" onclick="closePhotoLightbox()">✕</button>
+    </div>
+    <div class="lightbox-stage" id="lightboxStage">
+      <button type="button" class="gallery-arrow-btn prev" onclick="stepLightbox(-1)">‹</button>
+      <img id="lightboxImg" src="" alt="Tam ekran foto" />
+      <button type="button" class="gallery-arrow-btn next" onclick="stepLightbox(1)">›</button>
+    </div>
+    <div class="lightbox-thumbs" id="lightboxThumbs"></div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -789,7 +804,7 @@
   <footer class="footer">
     <div class="container" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;">
       <div>
-        <img src="./logo.svg?v=20261127_v24" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
+        <img src="./logo.svg?v=20261127_v25" alt="avtolive.az" style="height:42px;margin-bottom:8px;" />
         <p style="color:var(--text-muted);font-size:0.84rem;">
           © 2026 avtolive.az — Standart Avtomobil Elanları və Canlı Yayım Platforması.
         </p>
@@ -804,8 +819,8 @@
   </footer>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="./seed_data.js?v=20261127_v24"></script>
-  <script src="./brands_models.js?v=20261127_v24"></script>
-  <script src="./app.js?v=20261127_v24"></script>
+  <script src="./seed_data.js?v=20261127_v25"></script>
+  <script src="./brands_models.js?v=20261127_v25"></script>
+  <script src="./app.js?v=20261127_v25"></script>
 </body>
 </html>

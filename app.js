@@ -1022,14 +1022,28 @@ function openCarDetail(id) {
             ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
               <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
             ` : `
-              <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" />
+              <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" onclick="openPhotoLightbox(_galleryIndex)" style="cursor:zoom-in;" title="Tam ekran açmaq üçün klikləyin" />
               ${_galleryPhotos.length > 1 ? `
                 <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
                 <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
                 <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
               ` : ''}
             `}
-            <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isOwner && car.is_live ? 'flex' : 'none'};"></div>
+            ${car.is_live ? `
+              <div class="live-hud-top">
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <span class="live-ring-badge" style="position:static;padding:4px 9px;font-size:0.72rem;">LIVE</span>
+                  <span class="live-hud-pill">${iconSvg("eye")} ${car.live_viewers || 1}</span>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  ${!isOwner ? `<button type="button" class="live-hud-btn" id="hudSoundBtn" onclick="toggleViewerAudio()">🔊 Səs</button>` : ''}
+                  <button type="button" class="live-hud-btn" onclick="toggleLiveFullscreen()">⛶</button>
+                </div>
+              </div>
+              <button type="button" class="tap-unmute-banner" id="tapToUnmuteBtn" style="display:none;" onclick="unmuteViewerStream()">🔊 Səsi Aç</button>
+              <button type="button" class="live-heart-btn" onclick="spawnFloatingHeart()" title="Bəyən">❤️</button>
+            ` : ''}
+            <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${car.is_live ? 'flex' : 'none'};"></div>
           </div>
 
           ${(isOwner || car.is_live) ? `
@@ -1227,6 +1241,56 @@ function openCarDetail(id) {
 
 // Cross-Device Real-Time WebRTC Live Streaming (PeerJS Cloud Signaling)
 // Broadcaster Peer ID: "avtolive-az-live-car-<listingId>"
+const _peerConfig = {
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" }
+    ]
+  }
+};
+
+function createViewerOfferStream() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 16;
+  canvas.height = 16;
+  const stream = canvas.captureStream(1);
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      const dest = ctx.createMediaStreamDestination();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0;
+      osc.connect(gain);
+      gain.connect(dest);
+      osc.start();
+      const audioTrack = dest.stream.getAudioTracks()[0];
+      if (audioTrack) stream.addTrack(audioTrack);
+    }
+  } catch (e) {}
+  return stream;
+}
+
+function unmuteViewerStream() {
+  const vid = document.getElementById("studioVideoEl");
+  const banner = document.getElementById("tapToUnmuteBtn");
+  const btn = document.getElementById("btnViewerSound");
+  const hud = document.getElementById("hudSoundBtn");
+  if (vid) {
+    vid.muted = false;
+    vid.volume = 1.0;
+    vid.play().catch(() => {});
+  }
+  if (banner) banner.style.display = "none";
+  if (btn) {
+    btn.textContent = "Səs: Açıq";
+    btn.classList.remove("muted");
+  }
+  if (hud) hud.textContent = "🔊 Səs: Açıq";
+}
+
 function connectAsLiveViewer(listingId) {
   if (typeof Peer === "undefined") return;
   try {
@@ -1234,36 +1298,41 @@ function connectAsLiveViewer(listingId) {
       state.viewerPeer.destroy();
       state.viewerPeer = null;
     }
-    const viewerPeer = new Peer();
+    const viewerPeer = new Peer(_peerConfig);
     state.viewerPeer = viewerPeer;
     const broadcasterId = "avtolive-az-live-car-" + listingId;
 
     viewerPeer.on("open", () => {
-      // Create an empty canvas stream to initiate a WebRTC media call to the broadcaster
-      const canvas = document.createElement("canvas");
-      canvas.width = 16;
-      canvas.height = 16;
-      const dummyStream = canvas.captureStream(1);
+      const dummyStream = createViewerOfferStream();
       const call = viewerPeer.call(broadcasterId, dummyStream);
       if (!call) return;
 
       call.on("stream", (remoteStream) => {
         let videoEl = document.getElementById("studioVideoEl");
         if (!videoEl) {
-          const pane = document.querySelector(".live-video-pane");
+          const mediaBox = document.querySelector("#liveDetailModal .detail-gallery-media-box");
           const img = document.getElementById("studioMainImg");
           if (img) img.remove();
           videoEl = document.createElement("video");
           videoEl.id = "studioVideoEl";
           videoEl.autoplay = true;
           videoEl.playsInline = true;
-          videoEl.controls = true;
-          if (pane) pane.prepend(videoEl);
+          videoEl.controls = false;
+          if (mediaBox) mediaBox.prepend(videoEl);
         }
         if (videoEl) {
           videoEl.srcObject = remoteStream;
-          videoEl.play().catch(() => {});
-          showToast("Satıcının canlı kamerasına bağlandınız (Canlı Yayım)");
+          videoEl.muted = false;
+          videoEl.volume = 1.0;
+          videoEl.play().then(() => {
+            unmuteViewerStream();
+          }).catch(() => {
+            videoEl.muted = true;
+            videoEl.play().catch(() => {});
+            const banner = document.getElementById("tapToUnmuteBtn");
+            if (banner) banner.style.display = "inline-flex";
+          });
+          showToast("Satıcının canlı yayımına qoşuldunuz");
         }
       });
     });
@@ -2393,10 +2462,10 @@ async function startOwnerBroadcast(listingId) {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: _camFacingMode },
-      audio: true
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
     }).catch(() => navigator.mediaDevices.getUserMedia({ video: true, audio: true }));
     state.webcamStream = stream;
-    const pane = document.querySelector("#liveDetailModal .live-video-pane");
+    const pane = document.querySelector("#liveDetailModal .detail-gallery-media-box") || document.querySelector("#liveDetailModal .live-video-pane");
     if (pane) {
       let vid = document.getElementById("studioVideoEl");
       if (!vid) {
@@ -2417,7 +2486,7 @@ async function startOwnerBroadcast(listingId) {
     }
     if (typeof Peer !== "undefined") {
       if (state.broadcasterPeer) state.broadcasterPeer.destroy();
-      const peer = new Peer("avtolive-az-live-car-" + listingId);
+      const peer = new Peer("avtolive-az-live-car-" + listingId, _peerConfig);
       state.broadcasterPeer = peer;
       peer.on("call", (call) => call.answer(stream));
     }
@@ -2465,10 +2534,91 @@ async function flipBroadcastCamera(listingId) {
 function toggleViewerAudio() {
   const vid = document.getElementById("studioVideoEl");
   const btn = document.getElementById("btnViewerSound");
+  const hud = document.getElementById("hudSoundBtn");
+  const banner = document.getElementById("tapToUnmuteBtn");
   if (!vid) return showToast("Canlı video hələ başlamayıb", "info");
   vid.muted = !vid.muted;
+  if (!vid.muted) {
+    vid.volume = 1.0;
+    vid.play().catch(() => {});
+    if (banner) banner.style.display = "none";
+  }
   if (btn) {
     btn.textContent = vid.muted ? "Səs: Bağlı (Aç)" : "Səs: Açıq";
     btn.classList.toggle("muted", vid.muted);
   }
+  if (hud) hud.textContent = vid.muted ? "🔇 Səs" : "🔊 Səs: Açıq";
 }
+function spawnFloatingHeart() {
+  const box = document.querySelector("#liveDetailModal .detail-gallery-media-box");
+  if (!box) return;
+  const h = document.createElement("div");
+  h.className = "floating-heart";
+  h.textContent = "❤️";
+  h.style.right = (14 + Math.floor(Math.random() * 24)) + "px";
+  box.appendChild(h);
+  setTimeout(() => h.remove(), 1350);
+}
+
+function toggleLiveFullscreen() {
+  const box = document.querySelector("#liveDetailModal .detail-gallery-media-box");
+  if (!box) return;
+  if (!document.fullscreenElement && box.requestFullscreen) {
+    box.requestFullscreen().catch(() => {});
+  } else if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+let _lbIndex = 0;
+let _lbTouchX = 0;
+
+function openPhotoLightbox(idx = 0) {
+  if (!_galleryPhotos.length) return;
+  _lbIndex = (idx + _galleryPhotos.length) % _galleryPhotos.length;
+  renderLightbox();
+  document.getElementById("photoLightbox").classList.add("open");
+}
+
+function closePhotoLightbox() {
+  const lb = document.getElementById("photoLightbox");
+  if (lb) lb.classList.remove("open");
+}
+
+function stepLightbox(delta) {
+  if (!_galleryPhotos.length) return;
+  _lbIndex = (_lbIndex + delta + _galleryPhotos.length) % _galleryPhotos.length;
+  renderLightbox();
+}
+
+function renderLightbox() {
+  const img = document.getElementById("lightboxImg");
+  const cnt = document.getElementById("lightboxCounter");
+  const thumbs = document.getElementById("lightboxThumbs");
+  if (img) img.src = _galleryPhotos[_lbIndex];
+  if (cnt) cnt.textContent = `${_lbIndex + 1} / ${_galleryPhotos.length}`;
+  if (thumbs) {
+    thumbs.innerHTML = _galleryPhotos.map((u, i) => `
+      <img src="${u}" class="${i === _lbIndex ? 'active' : ''}" onclick="_lbIndex=${i};renderLightbox();" alt="Foto ${i + 1}" />
+    `).join("");
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  const lb = document.getElementById("photoLightbox");
+  if (!lb || !lb.classList.contains("open")) return;
+  if (e.key === "Escape") closePhotoLightbox();
+  if (e.key === "ArrowLeft") stepLightbox(-1);
+  if (e.key === "ArrowRight") stepLightbox(1);
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const stage = document.getElementById("lightboxStage");
+  if (stage) {
+    stage.addEventListener("touchstart", (e) => { _lbTouchX = e.changedTouches[0].clientX; }, { passive: true });
+    stage.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - _lbTouchX;
+      if (Math.abs(dx) > 40) stepLightbox(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+});
