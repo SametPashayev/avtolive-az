@@ -1,6 +1,5 @@
-// Cloudflare Pages Function + Cloudflare D1 SQL Database Backend for avtolive.az
-// Handles: /api/init, /api/auth/register, /api/auth/login, /api/auth/verify-email-otp,
-//          /api/listings, /api/live/:id/messages, /api/live/:id/toggle, /api/listings/:id/promote
+// Cloudflare Pages Function + Cloudflare D1 SQL Database Backend for TəklifAl.az
+// Reverse Marketplace for Home Repair, Appliance, Plumbing, Electrical & Auto Services in Azerbaijan
 
 async function sha256(str) {
   const buf = new TextEncoder().encode("avtolive_salt_" + str);
@@ -34,14 +33,25 @@ async function ensureSchema(db) {
       email TEXT UNIQUE NOT NULL,
       phone TEXT NOT NULL,
       password_hash TEXT NOT NULL,
-      role TEXT DEFAULT 'seller',
+      role TEXT DEFAULT 'customer',
       salon_name TEXT DEFAULT '',
       balance REAL DEFAULT 50.0,
       verified INTEGER DEFAULT 1,
-      avatar TEXT DEFAULT 'AL',
+      avatar TEXT DEFAULT 'TA',
       created_at TEXT NOT NULL
     )
   `).run();
+
+  // Safely add master columns to users table if upgrading from previous schema
+  const alterCols = [
+    "ALTER TABLE users ADD COLUMN specialty TEXT DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN rating REAL DEFAULT 5.0",
+    "ALTER TABLE users ADD COLUMN jobs_done INTEGER DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN is_pro INTEGER DEFAULT 0"
+  ];
+  for (const sql of alterCols) {
+    try { await db.prepare(sql).run(); } catch (e) {}
+  }
 
   await db.prepare(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -51,96 +61,77 @@ async function ensureSchema(db) {
     )
   `).run();
 
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS listings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      salon_id INTEGER DEFAULT 0,
-      brand TEXT NOT NULL,
-      model TEXT NOT NULL,
-      year INTEGER NOT NULL,
-      body_type TEXT NOT NULL,
-      fuel_type TEXT NOT NULL,
-      transmission TEXT NOT NULL,
-      drivetrain TEXT DEFAULT 'Tam (AWD)',
-      engine_volume REAL NOT NULL,
-      horsepower INTEGER NOT NULL,
-      mileage INTEGER NOT NULL,
-      color TEXT NOT NULL,
-      price REAL NOT NULL,
-      currency TEXT DEFAULT 'AZN',
-      city TEXT NOT NULL,
-      is_new INTEGER DEFAULT 0,
-      credit INTEGER DEFAULT 0,
-      barter INTEGER DEFAULT 0,
-      vin_code TEXT DEFAULT '',
-      tier TEXT DEFAULT 'standard',
-      is_live INTEGER DEFAULT 0,
-      live_title TEXT DEFAULT '',
-      live_viewers INTEGER DEFAULT 0,
-      live_stream_url TEXT DEFAULT '',
-      images TEXT NOT NULL,
-      features TEXT NOT NULL,
-      description_az TEXT NOT NULL,
-      description_tr TEXT NOT NULL,
-      description_ru TEXT NOT NULL,
-      seller_name TEXT NOT NULL,
-      seller_phone TEXT NOT NULL,
-      views INTEGER DEFAULT 120,
-      likes INTEGER DEFAULT 14,
-      created_at TEXT NOT NULL
-    )
-  `).run();
+  // Drop old car marketplace tables cleanly
+  const dropOld = [
+    "DROP TABLE IF EXISTS listings",
+    "DROP TABLE IF EXISTS live_messages",
+    "DROP TABLE IF EXISTS live_streams",
+    "DROP TABLE IF EXISTS showroom_messages"
+  ];
+  for (const sql of dropOld) {
+    try { await db.prepare(sql).run(); } catch (e) {}
+  }
 
   await db.prepare(`
-    CREATE TABLE IF NOT EXISTS live_messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      listing_id INTEGER NOT NULL,
-      user_name TEXT NOT NULL,
-      message TEXT NOT NULL,
-      is_seller INTEGER DEFAULT 0,
-      created_at TEXT NOT NULL
-    )
-  `).run();
-
-  await db.prepare(`
-    CREATE TABLE IF NOT EXISTS live_streams (
+    CREATE TABLE IF NOT EXISTS service_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT NOT NULL,
+      category TEXT NOT NULL,
       title TEXT NOT NULL,
-      seller_name TEXT NOT NULL,
-      seller_phone TEXT NOT NULL,
-      salon_name TEXT DEFAULT '',
-      is_salon INTEGER DEFAULT 0,
-      orientation TEXT DEFAULT 'vertical',
-      cover_image TEXT DEFAULT '',
-      is_live INTEGER DEFAULT 1,
-      viewers INTEGER DEFAULT 1,
+      description TEXT NOT NULL,
+      city TEXT NOT NULL,
+      district TEXT DEFAULT '',
+      urgency TEXT DEFAULT 'Təcili — Bu gün',
+      budget REAL DEFAULT 0,
+      images TEXT NOT NULL,
+      status TEXT DEFAULT 'open',
+      accepted_bid_id INTEGER DEFAULT 0,
+      offers_count INTEGER DEFAULT 0,
       created_at TEXT NOT NULL
     )
   `).run();
 
   await db.prepare(`
-    CREATE TABLE IF NOT EXISTS showroom_messages (
+    CREATE TABLE IF NOT EXISTS service_bids (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      stream_id INTEGER NOT NULL,
-      user_name TEXT NOT NULL,
-      message TEXT NOT NULL,
-      is_seller INTEGER DEFAULT 0,
+      request_id INTEGER NOT NULL,
+      master_id INTEGER NOT NULL,
+      master_name TEXT NOT NULL,
+      master_phone TEXT NOT NULL,
+      master_specialty TEXT DEFAULT 'Usta',
+      master_rating REAL DEFAULT 5.0,
+      price REAL NOT NULL,
+      eta TEXT NOT NULL,
+      warranty TEXT DEFAULT 'Zəmanət verilir',
+      comment TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
       created_at TEXT NOT NULL
     )
   `).run();
 
-  // Clean up test users if still present
-  await db.prepare("DELETE FROM users WHERE email IN ('rashad@avtolive.az', 'testcheck@gmail.com')").run();
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS master_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_id INTEGER NOT NULL,
+      master_id INTEGER NOT NULL,
+      customer_name TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      comment TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `).run();
 }
 
-function parseListingRow(r) {
+function parseRequestRow(r) {
+  if (!r) return null;
   const copy = { ...r };
   try { copy.images = typeof r.images === "string" ? JSON.parse(r.images) : (r.images || []); } catch (e) { copy.images = []; }
-  try { copy.features = typeof r.features === "string" ? JSON.parse(r.features) : (r.features || []); } catch (e) { copy.features = []; }
   return copy;
 }
+
+const USER_COLS = "id, full_name, email, phone, role, salon_name, specialty, rating, jobs_done, is_pro, balance, verified, avatar, created_at";
 
 async function getCurrentUser(db, request) {
   const auth = request.headers.get("Authorization") || "";
@@ -148,7 +139,7 @@ async function getCurrentUser(db, request) {
   const token = auth.slice(7).trim();
   if (!token) return null;
   const user = await db.prepare(`
-    SELECT u.id, u.full_name, u.email, u.phone, u.role, u.salon_name, u.balance, u.verified, u.avatar
+    SELECT u.id, u.full_name, u.email, u.phone, u.role, u.salon_name, u.specialty, u.rating, u.jobs_done, u.is_pro, u.balance, u.verified, u.avatar
     FROM sessions s JOIN users u ON s.user_id = u.id
     WHERE s.token = ?
   `).bind(token).first();
@@ -171,7 +162,7 @@ export async function onRequest(context) {
 
   const db = env.DB;
   if (!db) {
-    return jsonResp({ error: "D1 Database binding (DB) not configured yet" }, 503);
+    return jsonResp({ error: "D1 Database binding (DB) not configured" }, 503);
   }
 
   await ensureSchema(db);
@@ -180,103 +171,29 @@ export async function onRequest(context) {
 
   if (request.method === "GET") {
     if (path === "/api/init") {
-      const { results } = await db.prepare("SELECT * FROM listings ORDER BY id DESC").all();
-      const dbListings = (results || []).map(parseListingRow);
-      const { results: streams } = await db.prepare("SELECT * FROM live_streams WHERE is_live = 1 ORDER BY is_salon DESC, id DESC").all();
-      const { results: salonUsers } = await db.prepare("SELECT id, full_name, phone, salon_name, role FROM users WHERE role = 'salon' OR (salon_name IS NOT NULL AND salon_name != '') ORDER BY id DESC").all();
-      const salons = (salonUsers || []).map(u => ({
-        id: u.id,
-        name: u.salon_name || u.full_name,
-        owner: u.full_name,
-        phone: u.phone,
-        city: "Bakı",
-        cover: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1200&q=80",
-        is_live: (streams || []).some(s => s.user_id === u.id),
-        description_az: `${u.salon_name || u.full_name} — rəsmi avtosalon və canlı vitrin.`,
-        description_tr: `${u.salon_name || u.full_name} — resmi oto galeri ve canlı vitrin.`,
-        description_ru: `${u.salon_name || u.full_name} — официальный автосалон.`
-      }));
+      const { results: reqRows } = await db.prepare("SELECT * FROM service_requests ORDER BY id DESC").all();
+      const requests = (reqRows || []).map(parseRequestRow);
+      const { results: bidRows } = await db.prepare("SELECT * FROM service_bids ORDER BY price ASC, id ASC").all();
+      const { results: masterRows } = await db.prepare(`
+        SELECT ${USER_COLS} FROM users
+        WHERE role = 'master' OR (specialty IS NOT NULL AND specialty != '') OR (salon_name IS NOT NULL AND salon_name != '')
+        ORDER BY is_pro DESC, rating DESC, jobs_done DESC, id DESC
+      `).all();
       const user = await getCurrentUser(db, request);
-      return jsonResp({ db_listings: dbListings, live_streams: streams || [], salons, user });
-    }
-
-    if (path.startsWith("/api/showroom/status/")) {
-      const streamId = parseInt(path.split("/")[4]) || 0;
-      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(streamId).first();
-      const { results: msgs } = await db.prepare("SELECT * FROM showroom_messages WHERE stream_id = ? ORDER BY id ASC").bind(streamId).all();
-      return jsonResp({ stream: stream || null, messages: msgs || [] });
+      return jsonResp({ requests, bids: bidRows || [], masters: masterRows || [], user });
     }
 
     if (path === "/api/users") {
-      const { results } = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, created_at FROM users ORDER BY id DESC").all();
+      const { results } = await db.prepare(`SELECT ${USER_COLS} FROM users ORDER BY id DESC`).all();
       return jsonResp({ users: results || [] });
     }
 
-    if (path === "/api/showroom/start") {
-      const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
-      const isSalon = (user.role === "salon" || Boolean(user.salon_name && user.salon_name.trim())) ? 1 : 0;
-      const title = (data.title || `${user.salon_name || user.full_name} — Canlı Avto Vitrin`).trim();
-      const orientation = data.orientation === "horizontal" ? "horizontal" : "vertical";
-      const cover = data.cover_image || "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80";
-      const now = new Date().toISOString();
-
-      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
-      const res = await db.prepare(`
-        INSERT INTO live_streams (user_id, title, seller_name, seller_phone, salon_name, is_salon, orientation, cover_image, is_live, viewers, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
-      `).bind(user.id, title, user.full_name, user.phone, user.salon_name || "", isSalon, orientation, cover, now).run();
-      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ stream }, 201);
-    }
-
-    if (path === "/api/showroom/stop") {
-      const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
-      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
-      return jsonResp({ stopped: true });
-    }
-
-    if (path.startsWith("/api/showroom/") && path.endsWith("/messages")) {
-      const streamId = parseInt(path.split("/")[3]) || 0;
-      const stream = await db.prepare("SELECT id, is_live FROM live_streams WHERE id = ?").bind(streamId).first();
-      if (!stream || stream.is_live !== 1) {
-        return jsonResp({ error: "Canlı yayım dayandırılıb" }, 410);
-      }
-      const user_name = (data.user_name || "Alıcı").trim();
-      const message = (data.message || "").trim();
-      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
-      const nowTime = new Date().toTimeString().slice(0, 5);
-      const res = await db.prepare(`
-        INSERT INTO showroom_messages (stream_id, user_name, message, is_seller, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(streamId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
-      const msg = await db.prepare("SELECT * FROM showroom_messages WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ message: msg }, 201);
-    }
-
-    if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
-      const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
-      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
-      if (existing.user_id !== user.id) {
-        return jsonResp({ error: "Yalnız öz elanınızda canlı yayım aça bilərsiniz" }, 403);
-      }
-      const newLive = data.is_live ? 1 : 0;
-      const newViewers = newLive ? Math.max(1, existing.live_viewers || 1) : 0;
-      const newTitle = newLive ? (existing.live_title || `CANLI: ${existing.brand} ${existing.model} (${existing.year})`) : existing.live_title;
-      await db.prepare("UPDATE listings SET is_live = ?, live_viewers = ?, live_title = ? WHERE id = ?")
-        .bind(newLive, newViewers, newTitle, listingId).run();
-      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      return jsonResp({ listing: parseListingRow(updated) });
-    }
-
-    if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
-      const { results } = await db.prepare("SELECT * FROM live_messages WHERE listing_id = ? ORDER BY id ASC").bind(listingId).all();
-      return jsonResp({ messages: results || [] });
+    if (path.startsWith("/api/requests/")) {
+      const reqId = parseInt(path.split("/")[3]) || 0;
+      const row = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      if (!row) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
+      const { results: bids } = await db.prepare("SELECT * FROM service_bids WHERE request_id = ? ORDER BY price ASC, id ASC").bind(reqId).all();
+      return jsonResp({ request: parseRequestRow(row), bids: bids || [] });
     }
   }
 
@@ -295,7 +212,11 @@ export async function onRequest(context) {
       }
       if (phoneDigits.length >= 9) {
         const { results } = await db.prepare("SELECT phone FROM users").all();
-        phoneTaken = (results || []).some(r => String(r.phone || "").replace(/\D/g, "") === phoneDigits);
+        const last9 = phoneDigits.slice(-9);
+        phoneTaken = (results || []).some(r => {
+          const d = String(r.phone || "").replace(/\D/g, "");
+          return d === phoneDigits || (d.length >= 9 && d.slice(-9) === last9);
+        });
       }
       return jsonResp({ exists: emailTaken, email_taken: emailTaken, phone_taken: phoneTaken });
     }
@@ -303,54 +224,53 @@ export async function onRequest(context) {
     if (path === "/api/auth/register") {
       const full_name = (data.full_name || "").trim();
       const email = (data.email || "").trim().toLowerCase();
-      const phone = (data.phone || "+994 50 000 00 00").trim();
+      const phone = (data.phone || "+994").trim();
       const password = data.password || "";
+      const role = data.role === "master" ? "master" : "customer";
+      const specialty = (data.specialty || "").trim();
       if (!full_name || !email || !password) {
-        return jsonResp({ error: "Bütün xanaları doldurun" }, 400);
+        return jsonResp({ error: "Bütün məcburi xanaları doldurun" }, 400);
       }
 
-      const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
+      const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "TA";
       const passHash = await sha256(password);
       const now = new Date().toISOString();
 
       const existing = await db.prepare("SELECT id, verified FROM users WHERE LOWER(email) = ?").bind(email).first();
       if (existing) {
-        // Only allow finishing step 2 verification if step === 'verify_code' AND existing.verified === 0
         if (data.step === "verify_code" && existing.verified === 0) {
           await db.prepare("UPDATE users SET verified = 1 WHERE id = ?").bind(existing.id).run();
           const token = randomHex(24);
           await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, existing.id, now).run();
-          const user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(existing.id).first();
+          const user = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(existing.id).first();
           return jsonResp({ token, user }, 200);
         }
-        return jsonResp({
-          error: "Bu e-poçt ünvanı artıq qeydiyyatdan keçib! Bir e-poçt ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.",
-          already_exists: true
-        }, 409);
+        return jsonResp({ error: "Bu e-poçt artıq qeydiyyatdan keçib." }, 409);
       }
 
-      const newPhoneDigits = phone.replace(/\D/g, "");
-      if (newPhoneDigits.length >= 9) {
-        const { results: phoneRows } = await db.prepare("SELECT phone FROM users").all();
-        if ((phoneRows || []).some(r => String(r.phone || "").replace(/\D/g, "") === newPhoneDigits)) {
-          return jsonResp({
-            error: "Bu telefon nömrəsi artıq qeydiyyatdan keçib! Bir nömrə ilə yalnız bir dəfə qeydiyyat olmaq mümkündür.",
-            phone_taken: true,
-            already_exists: true
-          }, 409);
+      const phoneDigits = phone.replace(/\D/g, "");
+      if (phoneDigits.length >= 9) {
+        const { results: allUsers } = await db.prepare("SELECT phone FROM users").all();
+        const last9 = phoneDigits.slice(-9);
+        const phoneExists = (allUsers || []).some(u => {
+          const d = (u.phone || "").replace(/\D/g, "");
+          return d === phoneDigits || (d.length >= 9 && d.slice(-9) === last9);
+        });
+        if (phoneExists) {
+          return jsonResp({ error: "Bu telefon nömrəsi artıq qeydiyyatdan keçib." }, 409);
         }
       }
 
       const verifiedFlag = data.verified === 0 ? 0 : 1;
       const res = await db.prepare(`
-        INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
-        VALUES (?, ?, ?, ?, 'seller', '', 50.0, ?, ?, ?)
-      `).bind(full_name, email, phone, passHash, verifiedFlag, initials, now).run();
+        INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, specialty, rating, jobs_done, is_pro, balance, verified, avatar, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, 10.0, ?, ?, ?)
+      `).bind(full_name, email, phone, passHash, role, specialty, specialty, verifiedFlag, initials, now).run();
       const userId = res.meta.last_row_id;
 
       const token = randomHex(24);
       await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, userId, now).run();
-      const user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(userId).first();
+      const user = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(userId).first();
       return jsonResp({ token, user }, 201);
     }
 
@@ -361,17 +281,12 @@ export async function onRequest(context) {
 
       let user = null;
       if (identifier.includes("@")) {
-        user = await db.prepare(`
-          SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
-          FROM users WHERE LOWER(email) = ? AND password_hash = ?
-        `).bind(identifier.toLowerCase(), passHash).first();
+        user = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE LOWER(email) = ? AND password_hash = ?`)
+          .bind(identifier.toLowerCase(), passHash).first();
       } else {
         const digits = identifier.replace(/\D/g, "");
         if (digits.length >= 9) {
-          const { results } = await db.prepare(`
-            SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
-            FROM users WHERE password_hash = ?
-          `).bind(passHash).all();
+          const { results } = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE password_hash = ?`).bind(passHash).all();
           const last9 = digits.slice(-9);
           user = (results || []).find(u => {
             const uDigits = String(u.phone || "").replace(/\D/g, "");
@@ -397,168 +312,144 @@ export async function onRequest(context) {
         return jsonResp({ error: "E-poçt və minimum 6 simvollu yeni parol daxil edin" }, 400);
       }
       const user = await db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(email).first();
-      if (!user) {
-        return jsonResp({ error: "Bu e-poçt ünvanı ilə istifadəçi tapılmadı" }, 404);
-      }
+      if (!user) return jsonResp({ error: "Bu e-poçt ünvanı ilə istifadəçi tapılmadı" }, 404);
       const newHash = await sha256(newPassword);
       await db.prepare("UPDATE users SET password_hash = ?, verified = 1 WHERE id = ?").bind(newHash, user.id).run();
       return jsonResp({ success: true });
     }
 
-    if (path === "/api/auth/send-email-otp" || path === "/api/auth/verify-email-otp") {
-      const email = (data.email || "").trim().toLowerCase();
-      if (!email || !email.includes("@")) {
-        return jsonResp({ error: "Düzgün e-poçt daxil edin" }, 400);
+    if (path === "/api/requests") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Sorğu yaratmaq üçün əvvəlcə hesabınıza daxil olun" }, 401);
+
+      const category = (data.category || "Kombi və İsitmə").trim();
+      const title = (data.title || "").trim();
+      const description = (data.description || "").trim();
+      const city = (data.city || "Bakı").trim();
+      const district = (data.district || "").trim();
+      const urgency = (data.urgency || "Təcili — Bu gün").trim();
+      const budget = parseFloat(data.budget) || 0;
+      const imagesArr = Array.isArray(data.images) ? data.images : [];
+      if (!title || !description) {
+        return jsonResp({ error: "Başlıq və problemin təsvirini daxil edin" }, 400);
       }
-      const full_name = (data.name || data.full_name || email.split("@")[0] || "İstifadəçi").trim();
       const now = new Date().toISOString();
-
-      let user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE LOWER(email) = ?").bind(email).first();
-      if (!user) {
-        const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
-        const passHash = await sha256(data.code || "otp");
-        const res = await db.prepare(`
-          INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, balance, verified, avatar, created_at)
-          VALUES (?, ?, '+994 50 000 00 00', ?, 'seller', '', 50.0, 1, ?, ?)
-        `).bind(full_name, email, passHash, initials, now).run();
-        user = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(res.meta.last_row_id).first();
-      }
-
-      if (path === "/api/auth/send-email-otp") {
-        return jsonResp({ sent: true, user });
-      }
-
-      const token = randomHex(24);
-      await db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").bind(token, user.id, now).run();
-      return jsonResp({ token, user });
+      const res = await db.prepare(`
+        INSERT INTO service_requests (
+          user_id, customer_name, customer_phone, category, title, description,
+          city, district, urgency, budget, images, status, accepted_bid_id, offers_count, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', 0, 0, ?)
+      `).bind(
+        user.id, user.full_name, user.phone, category, title, description,
+        city, district, urgency, budget, JSON.stringify(imagesArr), now
+      ).run();
+      const created = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ request: parseRequestRow(created) }, 201);
     }
 
-    if (path === "/api/listings") {
+    if (path.startsWith("/api/requests/") && path.endsWith("/bids")) {
+      const reqId = parseInt(path.split("/")[3]) || 0;
       const user = await getCurrentUser(db, request);
-      if (!user) {
-        return jsonResp({ error: "Elan paylaşmaq üçün əvvəlcə hesabınıza daxil olun" }, 401);
-      }
-      const userId = user.id;
-      const seller_name = user.full_name || data.seller_name || "AvtoLive İstifadəçi";
-      const seller_phone = user.phone || data.seller_phone || "+994 50 000 00 00";
-      const brand = data.brand || "BMW";
-      const model = data.model || "530e";
-      const year = parseInt(data.year) || 2024;
-      const body_type = data.body_type || "Sedan";
-      const fuel_type = data.fuel_type || "Benzin";
-      const transmission = data.transmission || "Avtomat";
-      const engine_volume = parseFloat(data.engine_volume) || 2.0;
-      const horsepower = parseInt(data.horsepower) || 250;
-      const mileage = parseInt(data.mileage) || 0;
-      const color = data.color || "Qara (Metolik)";
-      const price = parseFloat(data.price) || 45000;
-      const city = data.city || "Bakı";
-      const is_new = mileage === 0 ? 1 : 0;
-      const credit = data.credit ? 1 : 0;
-      const barter = data.barter ? 1 : 0;
-      const tier = data.tier || "standard";
-      const is_live = data.start_live ? 1 : 0;
-      const live_title = is_live ? (data.live_title || `CANLI: ${brand} ${model} (${year})`) : "";
-      const live_viewers = is_live ? 28 : 0;
-      const imagesArr = Array.isArray(data.images) && data.images.length > 0
-        ? data.images
-        : [data.image_url || "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"];
-      const images = JSON.stringify(imagesArr);
-      const features = JSON.stringify(data.features || ["360° Kamera", "Dəri Salon", "Lyuk", "Apple CarPlay", "LED Faralar"]);
-      const desc = data.description || "Avtomobil ideal vəziyyətdədir.";
-      const now = new Date().toISOString();
+      if (!user) return jsonResp({ error: "Qiymət təklifi göndərmək üçün hesabınıza daxil olun" }, 401);
 
+      const sReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      if (!sReq) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
+      if (sReq.status !== "open") return jsonResp({ error: "Bu sorğu üçün artıq usta seçilib" }, 400);
+      if (sReq.user_id === user.id) return jsonResp({ error: "Öz sorğunuza qiymət təklifi göndərə bilməzsiniz" }, 400);
+
+      const existingBid = await db.prepare("SELECT id FROM service_bids WHERE request_id = ? AND master_id = ?").bind(reqId, user.id).first();
+      if (existingBid) return jsonResp({ error: "Bu sorğuya artıq qiymət təklifi göndərmisiniz" }, 409);
+
+      const price = parseFloat(data.price) || 0;
+      const eta = (data.eta || "1 saata gəlirəm").trim();
+      const warranty = (data.warranty || "Zəmanət verilir").trim();
+      const comment = (data.comment || "Peşəkar xidmət göstərilir.").trim();
+      if (price <= 0) return jsonResp({ error: "Düzgün qiymət (AZN) daxil edin" }, 400);
+
+      // Deduct 2 AZN lead fee unless master is PRO
+      const fee = user.is_pro ? 0 : 2.0;
+      if (fee > 0 && (user.balance || 0) < fee) {
+        return jsonResp({ error: "Təklif göndərmək üçün balansınızda ən azı 2 ₼ olmalıdır (Tariflər bölməsinə baxın)" }, 402);
+      }
+      if (fee > 0) {
+        await db.prepare("UPDATE users SET balance = ROUND(balance - ?, 2), role = 'master' WHERE id = ?").bind(fee, user.id).run();
+      }
+
+      const now = new Date().toISOString();
+      const spec = user.specialty || user.salon_name || "Peşəkar Usta";
       const res = await db.prepare(`
-        INSERT INTO listings (
-          user_id, salon_id, brand, model, year, body_type, fuel_type, transmission, drivetrain,
-          engine_volume, horsepower, mileage, color, price, currency, city, is_new, credit, barter,
-          vin_code, tier, is_live, live_title, live_viewers, live_stream_url, images, features,
-          description_az, description_tr, description_ru, seller_name, seller_phone, views, likes, created_at
-        ) VALUES (?, 0, ?, ?, ?, ?, ?, ?, 'Tam (AWD)', ?, ?, ?, ?, ?, 'AZN', ?, ?, ?, ?, 'AVTOLIVE2026', ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+        INSERT INTO service_bids (
+          request_id, master_id, master_name, master_phone, master_specialty, master_rating,
+          price, eta, warranty, comment, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
       `).bind(
-        userId, brand, model, year, body_type, fuel_type, transmission,
-        engine_volume, horsepower, mileage, color, price, city, is_new, credit, barter,
-        tier, is_live, live_title, live_viewers, images, features,
-        desc, desc, desc, seller_name, seller_phone, now
+        reqId, user.id, user.full_name, user.phone, spec, user.rating || 5.0,
+        price, eta, warranty, comment, now
       ).run();
 
-      const row = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ listing: parseListingRow(row) }, 201);
+      await db.prepare("UPDATE service_requests SET offers_count = offers_count + 1 WHERE id = ?").bind(reqId).run();
+      const bid = await db.prepare("SELECT * FROM service_bids WHERE id = ?").bind(res.meta.last_row_id).first();
+      const updatedUser = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
+      return jsonResp({ bid, user: updatedUser }, 201);
     }
 
-    if (path === "/api/showroom/start") {
-      const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
-      const isSalon = (user.role === "salon" || Boolean(user.salon_name && user.salon_name.trim())) ? 1 : 0;
-      const title = (data.title || `${user.salon_name || user.full_name} — Canlı Avto Vitrin`).trim();
-      const orientation = data.orientation === "horizontal" ? "horizontal" : "vertical";
-      const cover = data.cover_image || "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80";
-      const now = new Date().toISOString();
-
-      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
-      const res = await db.prepare(`
-        INSERT INTO live_streams (user_id, title, seller_name, seller_phone, salon_name, is_salon, orientation, cover_image, is_live, viewers, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
-      `).bind(user.id, title, user.full_name, user.phone, user.salon_name || "", isSalon, orientation, cover, now).run();
-      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ stream }, 201);
-    }
-
-    if (path === "/api/showroom/stop") {
+    if (path.startsWith("/api/requests/") && path.endsWith("/accept-bid")) {
+      const reqId = parseInt(path.split("/")[3]) || 0;
       const user = await getCurrentUser(db, request);
       if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
-      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
-      return jsonResp({ stopped: true });
+      const sReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      if (!sReq) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
+      if (sReq.user_id !== user.id) return jsonResp({ error: "Yalnız sorğu sahibi təklifi qəbul edə bilər" }, 403);
+
+      const bidId = parseInt(data.bid_id) || 0;
+      const bid = await db.prepare("SELECT * FROM service_bids WHERE id = ? AND request_id = ?").bind(bidId, reqId).first();
+      if (!bid) return jsonResp({ error: "Təklif tapılmadı" }, 404);
+
+      await db.prepare("UPDATE service_bids SET status = 'accepted' WHERE id = ?").bind(bidId).run();
+      await db.prepare("UPDATE service_requests SET status = 'assigned', accepted_bid_id = ? WHERE id = ?").bind(bidId, reqId).run();
+      await db.prepare("UPDATE users SET jobs_done = COALESCE(jobs_done, 0) + 1 WHERE id = ?").bind(bid.master_id).run();
+
+      const updatedReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      return jsonResp({ request: parseRequestRow(updatedReq), accepted_bid: bid });
     }
 
-    if (path.startsWith("/api/showroom/") && path.endsWith("/messages")) {
-      const streamId = parseInt(path.split("/")[3]) || 0;
-      const stream = await db.prepare("SELECT id, is_live FROM live_streams WHERE id = ?").bind(streamId).first();
-      if (!stream || stream.is_live !== 1) {
-        return jsonResp({ error: "Canlı yayım dayandırılıb" }, 410);
-      }
-      const user_name = (data.user_name || "Alıcı").trim();
-      const message = (data.message || "").trim();
-      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
-      const nowTime = new Date().toTimeString().slice(0, 5);
-      const res = await db.prepare(`
-        INSERT INTO showroom_messages (stream_id, user_name, message, is_seller, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(streamId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
-      const msg = await db.prepare("SELECT * FROM showroom_messages WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ message: msg }, 201);
-    }
-
-    if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
+    if (path.startsWith("/api/requests/") && path.endsWith("/complete")) {
+      const reqId = parseInt(path.split("/")[3]) || 0;
       const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
-      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
-      if (existing.user_id !== user.id) {
-        return jsonResp({ error: "Yalnız öz elanınızda canlı yayım aça bilərsiniz" }, 403);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      const sReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      if (!sReq || sReq.user_id !== user.id) return jsonResp({ error: "İcazəniz yoxdur" }, 403);
+
+      const rating = Math.min(5, Math.max(1, parseInt(data.rating) || 5));
+      const comment = (data.comment || "İş yüksək səviyyədə görüldü.").trim();
+      await db.prepare("UPDATE service_requests SET status = 'completed' WHERE id = ?").bind(reqId).run();
+
+      if (sReq.accepted_bid_id) {
+        const bid = await db.prepare("SELECT master_id FROM service_bids WHERE id = ?").bind(sReq.accepted_bid_id).first();
+        if (bid) {
+          await db.prepare(`
+            INSERT INTO master_reviews (request_id, master_id, customer_name, rating, comment, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(reqId, bid.master_id, user.full_name, rating, comment, new Date().toISOString()).run();
+          const avgRow = await db.prepare("SELECT AVG(rating) as avg_r FROM master_reviews WHERE master_id = ?").bind(bid.master_id).first();
+          if (avgRow && avgRow.avg_r) {
+            await db.prepare("UPDATE users SET rating = ROUND(?, 1) WHERE id = ?").bind(avgRow.avg_r, bid.master_id).run();
+          }
+        }
       }
-      const newLive = data.is_live ? 1 : 0;
-      const newViewers = newLive ? Math.max(1, existing.live_viewers || 1) : 0;
-      const newTitle = newLive ? (existing.live_title || `CANLI: ${existing.brand} ${existing.model} (${existing.year})`) : existing.live_title;
-      await db.prepare("UPDATE listings SET is_live = ?, live_viewers = ?, live_title = ? WHERE id = ?")
-        .bind(newLive, newViewers, newTitle, listingId).run();
-      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      return jsonResp({ listing: parseListingRow(updated) });
+      const updatedReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
+      return jsonResp({ request: parseRequestRow(updatedReq) });
     }
 
-    if (path.startsWith("/api/live/") && path.endsWith("/messages")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
-      const user_name = data.user_name || "Alıcı";
-      const message = (data.message || "").trim();
-      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
-      const nowTime = new Date().toTimeString().slice(0, 5);
-      const res = await db.prepare(`
-        INSERT INTO live_messages (listing_id, user_name, message, is_seller, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(listingId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
-      const msg = await db.prepare("SELECT * FROM live_messages WHERE id = ?").bind(res.meta.last_row_id).first();
-      return jsonResp({ message: msg }, 201);
+    if (path === "/api/masters/upgrade-pro") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      if ((user.balance || 0) < 29) {
+        return jsonResp({ error: "PRO paket (29 ₼) üçün balansınız kifayət deyil" }, 402);
+      }
+      await db.prepare("UPDATE users SET balance = ROUND(balance - 29, 2), is_pro = 1, role = 'master' WHERE id = ?").bind(user.id).run();
+      const updated = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
+      return jsonResp({ user: updated });
     }
   }
 
@@ -571,57 +462,38 @@ export async function onRequest(context) {
       if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
       const full_name = (data.full_name || user.full_name).trim();
       const phone = (data.phone || user.phone).trim();
-      const salon_name = data.salon_name !== undefined ? String(data.salon_name || "").trim() : (user.salon_name || "");
-      const role = salon_name ? "salon" : "seller";
+      const specialty = data.specialty !== undefined ? String(data.specialty || "").trim() : (user.specialty || "");
+      const role = data.role === "master" || specialty ? "master" : "customer";
       const phoneDigits = phone.replace(/\D/g, "");
       if (phoneDigits.length >= 9) {
         const { results: others } = await db.prepare("SELECT id, phone FROM users WHERE id != ?").bind(user.id).all();
-        if ((others || []).some(u => (u.phone || "").replace(/\D/g, "") === phoneDigits)) {
+        const last9 = phoneDigits.slice(-9);
+        if ((others || []).some(u => {
+          const d = (u.phone || "").replace(/\D/g, "");
+          return d === phoneDigits || (d.length >= 9 && d.slice(-9) === last9);
+        })) {
           return jsonResp({ error: "Bu telefon nömrəsi başqa hesabda istifadə olunur" }, 409);
         }
       }
       const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || user.avatar;
-      await db.prepare("UPDATE users SET full_name = ?, phone = ?, salon_name = ?, role = ?, avatar = ? WHERE id = ?").bind(full_name, phone, salon_name, role, initials, user.id).run();
-      const updated = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(user.id).first();
+      await db.prepare("UPDATE users SET full_name = ?, phone = ?, specialty = ?, salon_name = ?, role = ?, avatar = ? WHERE id = ?")
+        .bind(full_name, phone, specialty, specialty, role, initials, user.id).run();
+      const updated = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
       return jsonResp({ user: updated });
-    }
-
-    if (path.startsWith("/api/listings/")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
-      const user = await getCurrentUser(db, request);
-      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
-      const existing = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
-      if (existing.user_id !== user.id) return jsonResp({ error: "Bu elanı redaktə etmək icazəniz yoxdur" }, 403);
-
-      const price = parseFloat(data.price) || existing.price;
-      const city = (data.city || existing.city).trim();
-      const mileage = data.mileage !== undefined ? (parseInt(data.mileage) || 0) : existing.mileage;
-      const desc = (data.description !== undefined ? data.description : existing.description_az).trim();
-      const credit = data.credit !== undefined ? (data.credit ? 1 : 0) : existing.credit;
-      const barter = data.barter !== undefined ? (data.barter ? 1 : 0) : existing.barter;
-
-      await db.prepare(`
-        UPDATE listings SET price = ?, city = ?, mileage = ?, description_az = ?, description_tr = ?, description_ru = ?, credit = ?, barter = ?
-        WHERE id = ?
-      `).bind(price, city, mileage, desc, desc, desc, credit, barter, listingId).run();
-
-      const updated = await db.prepare("SELECT * FROM listings WHERE id = ?").bind(listingId).first();
-      return jsonResp({ listing: parseListingRow(updated) });
     }
   }
 
   if (request.method === "DELETE") {
-    if (path.startsWith("/api/listings/")) {
-      const listingId = parseInt(path.split("/")[3]) || 0;
+    if (path.startsWith("/api/requests/")) {
+      const reqId = parseInt(path.split("/")[3]) || 0;
       const user = await getCurrentUser(db, request);
       if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
-      const existing = await db.prepare("SELECT id, user_id FROM listings WHERE id = ?").bind(listingId).first();
-      if (!existing) return jsonResp({ error: "Elan tapılmadı" }, 404);
-      if (existing.user_id !== user.id) return jsonResp({ error: "Bu elanı silmək icazəniz yoxdur" }, 403);
-      await db.prepare("DELETE FROM listings WHERE id = ?").bind(listingId).run();
-      await db.prepare("DELETE FROM live_messages WHERE listing_id = ?").bind(listingId).run();
-      return jsonResp({ deleted: true, id: listingId });
+      const existing = await db.prepare("SELECT id, user_id FROM service_requests WHERE id = ?").bind(reqId).first();
+      if (!existing) return jsonResp({ error: "Sorğu tapılmadı" }, 404);
+      if (existing.user_id !== user.id) return jsonResp({ error: "Bu sorğunu silmək icazəniz yoxdur" }, 403);
+      await db.prepare("DELETE FROM service_requests WHERE id = ?").bind(reqId).run();
+      await db.prepare("DELETE FROM service_bids WHERE request_id = ?").bind(reqId).run();
+      return jsonResp({ deleted: true, id: reqId });
     }
   }
 
