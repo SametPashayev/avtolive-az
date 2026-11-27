@@ -103,6 +103,34 @@ async function ensureSchema(db) {
     )
   `).run();
 
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS live_streams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      seller_name TEXT NOT NULL,
+      seller_phone TEXT NOT NULL,
+      salon_name TEXT DEFAULT '',
+      is_salon INTEGER DEFAULT 0,
+      orientation TEXT DEFAULT 'vertical',
+      cover_image TEXT DEFAULT '',
+      is_live INTEGER DEFAULT 1,
+      viewers INTEGER DEFAULT 1,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS showroom_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      stream_id INTEGER NOT NULL,
+      user_name TEXT NOT NULL,
+      message TEXT NOT NULL,
+      is_seller INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `).run();
+
   // Clean up test users if still present
   await db.prepare("DELETE FROM users WHERE email IN ('rashad@avtolive.az', 'testcheck@gmail.com')").run();
 }
@@ -152,15 +180,79 @@ export async function onRequest(context) {
 
   if (request.method === "GET") {
     if (path === "/api/init") {
-      const { results } = await db.prepare("SELECT * FROM listings ORDER BY is_live DESC, id DESC").all();
+      const { results } = await db.prepare("SELECT * FROM listings ORDER BY id DESC").all();
       const dbListings = (results || []).map(parseListingRow);
+      const { results: streams } = await db.prepare("SELECT * FROM live_streams WHERE is_live = 1 ORDER BY is_salon DESC, id DESC").all();
+      const { results: salonUsers } = await db.prepare("SELECT id, full_name, phone, salon_name, role FROM users WHERE role = 'salon' OR (salon_name IS NOT NULL AND salon_name != '') ORDER BY id DESC").all();
+      const salons = (salonUsers || []).map(u => ({
+        id: u.id,
+        name: u.salon_name || u.full_name,
+        owner: u.full_name,
+        phone: u.phone,
+        city: "Bakı",
+        cover: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1200&q=80",
+        is_live: (streams || []).some(s => s.user_id === u.id),
+        description_az: `${u.salon_name || u.full_name} — rəsmi avtosalon və canlı vitrin.`,
+        description_tr: `${u.salon_name || u.full_name} — resmi oto galeri ve canlı vitrin.`,
+        description_ru: `${u.salon_name || u.full_name} — официальный автосалон.`
+      }));
       const user = await getCurrentUser(db, request);
-      return jsonResp({ db_listings: dbListings, user });
+      return jsonResp({ db_listings: dbListings, live_streams: streams || [], salons, user });
+    }
+
+    if (path.startsWith("/api/showroom/status/")) {
+      const streamId = parseInt(path.split("/")[4]) || 0;
+      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(streamId).first();
+      const { results: msgs } = await db.prepare("SELECT * FROM showroom_messages WHERE stream_id = ? ORDER BY id ASC").bind(streamId).all();
+      return jsonResp({ stream: stream || null, messages: msgs || [] });
     }
 
     if (path === "/api/users") {
       const { results } = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, created_at FROM users ORDER BY id DESC").all();
       return jsonResp({ users: results || [] });
+    }
+
+    if (path === "/api/showroom/start") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
+      const isSalon = (user.role === "salon" || Boolean(user.salon_name && user.salon_name.trim())) ? 1 : 0;
+      const title = (data.title || `${user.salon_name || user.full_name} — Canlı Avto Vitrin`).trim();
+      const orientation = data.orientation === "horizontal" ? "horizontal" : "vertical";
+      const cover = data.cover_image || "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80";
+      const now = new Date().toISOString();
+
+      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
+      const res = await db.prepare(`
+        INSERT INTO live_streams (user_id, title, seller_name, seller_phone, salon_name, is_salon, orientation, cover_image, is_live, viewers, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+      `).bind(user.id, title, user.full_name, user.phone, user.salon_name || "", isSalon, orientation, cover, now).run();
+      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ stream }, 201);
+    }
+
+    if (path === "/api/showroom/stop") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
+      return jsonResp({ stopped: true });
+    }
+
+    if (path.startsWith("/api/showroom/") && path.endsWith("/messages")) {
+      const streamId = parseInt(path.split("/")[3]) || 0;
+      const stream = await db.prepare("SELECT id, is_live FROM live_streams WHERE id = ?").bind(streamId).first();
+      if (!stream || stream.is_live !== 1) {
+        return jsonResp({ error: "Canlı yayım dayandırılıb" }, 410);
+      }
+      const user_name = (data.user_name || "Alıcı").trim();
+      const message = (data.message || "").trim();
+      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
+      const nowTime = new Date().toTimeString().slice(0, 5);
+      const res = await db.prepare(`
+        INSERT INTO showroom_messages (stream_id, user_name, message, is_seller, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(streamId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
+      const msg = await db.prepare("SELECT * FROM showroom_messages WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ message: msg }, 201);
     }
 
     if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
@@ -394,6 +486,49 @@ export async function onRequest(context) {
       return jsonResp({ listing: parseListingRow(row) }, 201);
     }
 
+    if (path === "/api/showroom/start") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Canlı yayım açmaq üçün hesabınıza daxil olun" }, 401);
+      const isSalon = (user.role === "salon" || Boolean(user.salon_name && user.salon_name.trim())) ? 1 : 0;
+      const title = (data.title || `${user.salon_name || user.full_name} — Canlı Avto Vitrin`).trim();
+      const orientation = data.orientation === "horizontal" ? "horizontal" : "vertical";
+      const cover = data.cover_image || "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1000&q=80";
+      const now = new Date().toISOString();
+
+      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
+      const res = await db.prepare(`
+        INSERT INTO live_streams (user_id, title, seller_name, seller_phone, salon_name, is_salon, orientation, cover_image, is_live, viewers, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?)
+      `).bind(user.id, title, user.full_name, user.phone, user.salon_name || "", isSalon, orientation, cover, now).run();
+      const stream = await db.prepare("SELECT * FROM live_streams WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ stream }, 201);
+    }
+
+    if (path === "/api/showroom/stop") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      await db.prepare("UPDATE live_streams SET is_live = 0 WHERE user_id = ?").bind(user.id).run();
+      return jsonResp({ stopped: true });
+    }
+
+    if (path.startsWith("/api/showroom/") && path.endsWith("/messages")) {
+      const streamId = parseInt(path.split("/")[3]) || 0;
+      const stream = await db.prepare("SELECT id, is_live FROM live_streams WHERE id = ?").bind(streamId).first();
+      if (!stream || stream.is_live !== 1) {
+        return jsonResp({ error: "Canlı yayım dayandırılıb" }, 410);
+      }
+      const user_name = (data.user_name || "Alıcı").trim();
+      const message = (data.message || "").trim();
+      if (!message) return jsonResp({ error: "Boş mesaj" }, 400);
+      const nowTime = new Date().toTimeString().slice(0, 5);
+      const res = await db.prepare(`
+        INSERT INTO showroom_messages (stream_id, user_name, message, is_seller, created_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(streamId, user_name, message, data.is_seller ? 1 : 0, nowTime).run();
+      const msg = await db.prepare("SELECT * FROM showroom_messages WHERE id = ?").bind(res.meta.last_row_id).first();
+      return jsonResp({ message: msg }, 201);
+    }
+
     if (path.startsWith("/api/live/") && path.endsWith("/toggle")) {
       const listingId = parseInt(path.split("/")[3]) || 0;
       const user = await getCurrentUser(db, request);
@@ -436,6 +571,8 @@ export async function onRequest(context) {
       if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
       const full_name = (data.full_name || user.full_name).trim();
       const phone = (data.phone || user.phone).trim();
+      const salon_name = data.salon_name !== undefined ? String(data.salon_name || "").trim() : (user.salon_name || "");
+      const role = salon_name ? "salon" : "seller";
       const phoneDigits = phone.replace(/\D/g, "");
       if (phoneDigits.length >= 9) {
         const { results: others } = await db.prepare("SELECT id, phone FROM users WHERE id != ?").bind(user.id).all();
@@ -444,7 +581,7 @@ export async function onRequest(context) {
         }
       }
       const initials = full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || user.avatar;
-      await db.prepare("UPDATE users SET full_name = ?, phone = ?, avatar = ? WHERE id = ?").bind(full_name, phone, initials, user.id).run();
+      await db.prepare("UPDATE users SET full_name = ?, phone = ?, salon_name = ?, role = ?, avatar = ? WHERE id = ?").bind(full_name, phone, salon_name, role, initials, user.id).run();
       const updated = await db.prepare("SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar FROM users WHERE id = ?").bind(user.id).first();
       return jsonResp({ user: updated });
     }
@@ -489,4 +626,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-    }
+        }
