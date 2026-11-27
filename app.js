@@ -934,7 +934,7 @@ function switchGalleryPhoto(imgUrl) {
   if (mainImg) mainImg.src = imgUrl;
 }
 
-async let _galleryPhotos = [];
+let _galleryPhotos = [];
 let _galleryIndex = 0;
 
 function setGalleryIndex(idx) {
