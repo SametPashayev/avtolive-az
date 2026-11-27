@@ -691,7 +691,7 @@ function renderFeaturedHeroLive() {
           ${featured.live_title || getDescription(featured).slice(0, 95)}
         </p>
         <div style="display:flex;gap:10px;">
-          <button class="btn-primary" onclick="openCarDetail(${featured.id})">
+          <button class="btn-primary btn-live-red" onclick="openCarDetail(${featured.id})">
             ${iconSvg("broadcast")} ${dict.watch_live_btn}
           </button>
         </div>
@@ -710,7 +710,7 @@ function renderLiveStrip() {
       <div style="grid-column:1/-1;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;text-align:center;">
         <div style="font-weight:800;font-size:1rem;color:#0f172a;margin-bottom:6px;">Hazırda aktiv canlı yayım yoxdur</div>
         <div style="font-size:0.86rem;color:#64748b;margin-bottom:14px;">Öz avtomobiliniz üçün ilk canlı yayımı elə indi başladın.</div>
-        <button class="btn-primary" onclick="openPostModal(true)">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
+        <button class="btn-primary btn-live-red" onclick="openPostModal(true)">${iconSvg("broadcast")} Canlı Yayıma Başla</button>
       </div>
     `;
     return;
@@ -994,7 +994,7 @@ async function openCarDetail(id) {
                 <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
                 <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;background:#dc2626 !important;">Canlı Yayımı Bitir</button>
               ` : `
-                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
+                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;background:#dc2626 !important;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
               `}
             ` : `
               ${car.is_live ? `
