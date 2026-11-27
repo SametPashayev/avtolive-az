@@ -263,17 +263,33 @@ export async function onRequest(context) {
     }
 
     if (path === "/api/auth/login") {
-      const email = (data.email || "").trim().toLowerCase();
+      const identifier = (data.identifier || data.email || data.phone || "").trim();
       const password = data.password || "";
       const passHash = await sha256(password);
 
-      const user = await db.prepare(`
-        SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
-        FROM users WHERE LOWER(email) = ? AND password_hash = ?
-      `).bind(email, passHash).first();
+      let user = null;
+      if (identifier.includes("@")) {
+        user = await db.prepare(`
+          SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
+          FROM users WHERE LOWER(email) = ? AND password_hash = ?
+        `).bind(identifier.toLowerCase(), passHash).first();
+      } else {
+        const digits = identifier.replace(/\D/g, "");
+        if (digits.length >= 9) {
+          const { results } = await db.prepare(`
+            SELECT id, full_name, email, phone, role, salon_name, balance, verified, avatar
+            FROM users WHERE password_hash = ?
+          `).bind(passHash).all();
+          const last9 = digits.slice(-9);
+          user = (results || []).find(u => {
+            const uDigits = String(u.phone || "").replace(/\D/g, "");
+            return uDigits === digits || (uDigits.length >= 9 && uDigits.slice(-9) === last9);
+          }) || null;
+        }
+      }
 
       if (!user) {
-        return jsonResp({ error: "E-poçt və ya parol yanlışdır" }, 401);
+        return jsonResp({ error: "E-poçt / nömrə və ya parol yanlışdır" }, 401);
       }
 
       const token = randomHex(24);
@@ -473,4 +489,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-}
+    }
