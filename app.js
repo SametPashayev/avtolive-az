@@ -934,168 +934,278 @@ function switchGalleryPhoto(imgUrl) {
   if (mainImg) mainImg.src = imgUrl;
 }
 
-async function openCarDetail(id) {
+async let _galleryPhotos = [];
+let _galleryIndex = 0;
+
+function setGalleryIndex(idx) {
+  if (!_galleryPhotos.length) return;
+  _galleryIndex = (idx + _galleryPhotos.length) % _galleryPhotos.length;
+  const imgEl = document.getElementById("studioMainImg");
+  if (imgEl) imgEl.src = _galleryPhotos[_galleryIndex];
+  const cntEl = document.getElementById("galleryCounterPill");
+  if (cntEl) cntEl.textContent = `${_galleryIndex + 1} / ${_galleryPhotos.length}`;
+  document.querySelectorAll(".detail-thumb-img").forEach((el, i) => {
+    el.classList.toggle("active", i === _galleryIndex);
+  });
+}
+
+function stepGalleryPhoto(delta) {
+  setGalleryIndex(_galleryIndex + delta);
+}
+
+function filterByBrandFromDetail(brand) {
+  closeModal("liveDetailModal");
+  const brandInput = document.getElementById("fBrand");
+  if (brandInput) brandInput.value = brand;
+  const label = document.getElementById("ddLabel_brand");
+  if (label) {
+    label.textContent = brand;
+    label.classList.remove("placeholder");
+  }
+  if (typeof onFilterBrandSelect === "function") onFilterBrandSelect(brand);
+  switchTab("all");
+  renderAll();
+}
+
+function openCarDetail(id) {
   const car = state.listings.find(c => c.id === id);
   if (!car) return;
   state.activeModalListing = car;
 
-  document.getElementById("modalCarTitle").textContent = `${car.brand} ${car.model} (${car.year}) — ${formatPrice(car.price)}`;
+  document.getElementById("modalCarTitle").textContent = `${car.brand} ${car.model} (${car.year})`;
   const badge = document.getElementById("modalLiveBadge");
   if (car.is_live) {
     badge.style.background = "linear-gradient(135deg, #ef4444, #dc2626)";
-    badge.innerHTML = `${iconSvg("broadcast")} CANLI YAYIM (${car.live_viewers} izləyici)`;
+    badge.innerHTML = `${iconSvg("broadcast")} CANLI YAYIM (${car.live_viewers || 0} izləyici)`;
   } else {
-    badge.style.background = "#059669";
-    badge.innerHTML = `${iconSvg("car")} STANDART ELAN #${10000 + car.id}`;
+    badge.style.background = "#2563eb";
+    badge.innerHTML = `${iconSvg("car")} ELAN № ${10000 + car.id}`;
   }
 
-  const dict = I18N[state.lang];
   const body = document.getElementById("modalBodyContent");
-  const extraPhotos = (car.images && car.images.length > 1)
-    ? car.images
-    : [
-        car.images[0],
-        "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1000&q=80",
-        "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1000&q=80"
-      ];
+  _galleryPhotos = (car.images && car.images.length > 0)
+    ? [...car.images]
+    : ["https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1000&q=80"];
+  _galleryIndex = 0;
+
+  const isFav = (state.favorites || []).includes(car.id);
+  const sellerInitials = (car.seller_name || "AL").split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "AL";
+  const otherCars = state.listings.filter(c => c.id !== car.id).slice(0, 8);
+  const isOwner = isListingOwner(car);
 
   body.innerHTML = `
-    <div class="live-studio-grid">
-      <div class="live-video-pane" style="background:#060911;">
-        ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
-          <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${car.images[0]}"></video>
-        ` : `
-          <div style="display:flex;flex-direction:column;height:100%;">
-            <img id="studioMainImg" src="${extraPhotos[0]}" style="width:100%;height:420px;object-fit:cover;" />
-            <div style="display:flex;gap:10px;padding:12px 16px;background:#090e1a;border-top:1px solid var(--border-color);overflow-x:auto;">
-              ${extraPhotos.map((img, i) => `
-                <img src="${img}" onclick="switchGalleryPhoto('${img}')" style="width:92px;height:62px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid ${i === 0 ? '#ff2a4b' : 'transparent'};" />
-              `).join("")}
-            </div>
-          </div>
-        `}
+    <div class="detail-breadcrumb">
+      <button type="button" onclick="closeModal('liveDetailModal');switchTab('all');">Ana səhifə</button>
+      <span>›</span>
+      <button type="button" onclick="filterByBrandFromDetail('${car.brand.replace(/'/g, "\'")}')">${car.brand}</button>
+      <span>›</span>
+      <span style="color:#0f172a;font-weight:700;">${car.model}</span>
+    </div>
 
-        <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isListingOwner(car) && car.is_live ? 'flex' : 'none'};"></div>
-        <div class="live-controls-bar" style="${!car.is_live ? 'position:static;margin:12px 16px;' : ''}">
-          <div>
-            <div style="font-weight:800;font-size:0.9rem;color:#fff;">
-              ${car.is_live ? (car.live_title || 'Canlı Avtomobil Təqdimatı') : `${car.brand} ${car.model} — Foto Qalereya`}
-            </div>
-            <div style="font-size:0.78rem;color:#cbd5e1;">
-              Satıcı: ${car.seller_name} • ${car.seller_phone}
-            </div>
-          </div>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            ${isListingOwner(car) ? `
-              ${car.is_live ? `
-                <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
-                <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
-                <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
-                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;background:#dc2626 !important;">Canlı Yayımı Bitir</button>
-              ` : `
-                <button type="button" class="btn-primary" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;background:#dc2626 !important;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
-              `}
-            ` : `
-              ${car.is_live ? `
-                <button type="button" class="live-ctrl-btn" id="btnViewerSound" onclick="toggleViewerAudio()">Səs: Bağlı (Aç)</button>
-              ` : ''}
-            `}
-          </div>
-        </div>
-      </div>
-
-      <div class="live-chat-pane">
-        <div style="padding:16px;background:#ffffff;border-bottom:1px solid var(--border-color);">
-          <div style="font-size:1.75rem;font-weight:900;color:#1d4ed8;margin-bottom:6px;">${formatPrice(car.price)}</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;">
-            ${car.credit ? `<span class="badge-fin">${iconSvg("bank")} Kreditlə mümkündür</span>` : ''}
-            ${car.barter ? `<span class="badge-fin">${iconSvg("refresh")} Barter mümkündür</span>` : ''}
-            ${car.is_new || car.mileage === 0 ? `<span class="badge-tier badge-new">Yeni (0 km)</span>` : ''}
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid var(--border-color);">
-            <div>
-              <div style="font-weight:800;font-size:0.88rem;">${car.seller_name}</div>
-              <div style="font-size:0.77rem;color:var(--text-muted);">${car.city}</div>
-            </div>
-            <a href="tel:${car.seller_phone}" class="btn-success" style="text-decoration:none;padding:8px 13px;font-size:0.82rem;">
-              ${iconSvg("phone")} ${car.seller_phone}
-            </a>
-          </div>
-        </div>
-
-        <div style="padding:10px 16px;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:800;font-size:0.86rem;">${car.is_live ? 'Canlı Yayım Çatı' : 'Satıcıya Sual Yaz'}</span>
-          <span style="font-size:0.74rem;color:#10b981;display:inline-flex;align-items:center;gap:5px;"><span class="status-online-dot"></span> Online</span>
-        </div>
-
-        <div class="chat-messages" id="liveChatContainer">
-          <div style="color:var(--text-muted);font-size:0.83rem;">Yüklənir...</div>
-        </div>
-
-        <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border-color);">
-          <button class="chip-toggle" style="font-size:0.72rem;padding:4px 9px;" onclick="sendQuickQuestion(${car.id}, 'Salam, maşın bezkraskadır? Boya dəyən yeri var?')">Bezkraskadır?</button>
-          <button class="chip-toggle" style="font-size:0.72rem;padding:4px 9px;" onclick="sendQuickQuestion(${car.id}, 'Son qiymət nədir və barter mümkündür?')">Son qiymət & Barter</button>
-          <button class="chip-toggle" style="font-size:0.72rem;padding:4px 9px;" onclick="sendQuickQuestion(${car.id}, 'Maşına harada baxmaq olar?')">Harada baxmaq olar?</button>
-        </div>
-
-        <form class="chat-input-row" onsubmit="sendLiveChatMessage(event, ${car.id})">
-          <input type="text" class="form-input" id="liveChatInput" placeholder="Satıcıya sualınızı yazın..." required />
-          <button type="submit" class="btn-primary" style="padding:10px 14px;">Göndər</button>
-        </form>
+    <div class="detail-title-row">
+      <h2 class="detail-main-title">${car.brand} ${car.model}, ${car.engine_volume} L, ${car.year} il, ${car.mileage.toLocaleString()} km</h2>
+      <div class="detail-top-actions">
+        <button type="button" class="btn-secondary" onclick="toggleFavorite(${car.id}, event);openCarDetail(${car.id});" style="padding:7px 12px;font-size:0.82rem;">
+          ${iconSvg("heart")} ${isFav ? "Seçilmişlərdədir" : "Seçilmişlərdə saxla"}
+        </button>
+        <button type="button" class="btn-secondary" onclick="shareListing(${car.id})" style="padding:7px 12px;font-size:0.82rem;">
+          Elanı Paylaş
+        </button>
       </div>
     </div>
 
-    <div class="detail-specs-grid">
+    <div class="detail-2col-grid">
+      <!-- LEFT COLUMN: MEDIA GALLERY / LIVE STUDIO -->
       <div>
-        <h4 style="font-size:1.05rem;font-weight:800;margin-bottom:12px;">Avtomobil Haqqında Ətraflı Məlumat</h4>
-        <p style="color:#334155;font-size:0.92rem;line-height:1.65;margin-bottom:18px;">
-          ${getDescription(car)}
-        </p>
+        <div class="detail-gallery-stage live-video-pane">
+          ${car.is_live && car.live_stream_url && !car.live_stream_url.includes("mixkit.co") ? `
+            <video id="studioVideoEl" src="${car.live_stream_url}" autoplay muted loop playsinline controls poster="${_galleryPhotos[0]}"></video>
+          ` : `
+            <img id="studioMainImg" src="${_galleryPhotos[0]}" alt="${car.brand} ${car.model}" />
+            ${_galleryPhotos.length > 1 ? `
+              <button type="button" class="gallery-arrow-btn prev" onclick="stepGalleryPhoto(-1)">‹</button>
+              <button type="button" class="gallery-arrow-btn next" onclick="stepGalleryPhoto(1)">›</button>
+              <div class="gallery-counter-pill" id="galleryCounterPill">1 / ${_galleryPhotos.length}</div>
+            ` : ''}
+          `}
 
-        <h5 style="font-size:0.82rem;font-weight:800;margin-bottom:10px;color:var(--text-muted);letter-spacing:0.5px;">AVTOMOBİLİN TƏCHİZATI</h5>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
-          ${(car.features || []).map(f => `<span class="badge-fin" style="padding:6px 12px;font-size:0.79rem;">${iconSvg("check")} ${f}</span>`).join("")}
+          <div class="broadcaster-chat-overlay" id="broadcasterChatOverlay" style="display:${isOwner && car.is_live ? 'flex' : 'none'};"></div>
+
+          ${(isOwner || car.is_live) ? `
+            <div class="live-controls-bar" style="position:static;margin:0;border-radius:0;border-top:1px solid rgba(255,255,255,0.12);background:#0f172a;">
+              <div>
+                <div style="font-weight:800;font-size:0.86rem;color:#fff;">
+                  ${car.is_live ? (car.live_title || 'Canlı Avtomobil Təqdimatı') : 'Canlı Yayım Studiyası'}
+                </div>
+                <div style="font-size:0.75rem;color:#cbd5e1;">
+                  ${car.is_live ? 'Real vaxtlı video və sual-cavab' : 'Alıcılara maşını canlı göstərin'}
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                ${isOwner ? `
+                  ${car.is_live ? `
+                    <button type="button" class="live-ctrl-btn" id="btnToggleMic" onclick="toggleBroadcastMic()">Mikrofon: Açıq</button>
+                    <button type="button" class="live-ctrl-btn" id="btnToggleCam" onclick="toggleBroadcastCam()">Kamera: Açıq</button>
+                    <button type="button" class="live-ctrl-btn" onclick="flipBroadcastCamera(${car.id})">Kamera Çevir</button>
+                    <button type="button" class="btn-primary btn-live-red" onclick="toggleLiveStatus(${car.id}, 0)" style="padding:7px 12px;font-size:0.78rem;">Canlı Yayımı Bitir</button>
+                  ` : `
+                    <button type="button" class="btn-primary btn-live-red" onclick="toggleLiveStatus(${car.id}, 1)" style="padding:8px 13px;font-size:0.8rem;">${iconSvg("broadcast")} Canlı Yayımı Başlat</button>
+                  `}
+                ` : `
+                  ${car.is_live ? `
+                    <button type="button" class="live-ctrl-btn" id="btnViewerSound" onclick="toggleViewerAudio()">Səs: Bağlı (Aç)</button>
+                  ` : ''}
+                `}
+              </div>
+            </div>
+          ` : ''}
         </div>
 
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <a href="tel:${car.seller_phone}" class="btn-success" style="text-decoration:none;">
-            ${iconSvg("phone")} Satıcıya Zəng Et: ${car.seller_phone}
-          </a>
-          <button class="btn-secondary" onclick="shareListing(${car.id})">Elanı Paylaş</button>
-          ${isListingOwner(car) ? `
-            <button class="btn-secondary" onclick="closeModal('liveDetailModal');openEditListingModal(${car.id})">Redaktə Et</button>
-            <button class="btn-secondary" onclick="closeModal('liveDetailModal');deleteMyListing(${car.id})" style="color:#dc2626 !important;border-color:#fecaca !important;">Elanı Sil</button>
-          ` : ''}
-          ${car.tier !== 'vip' ? `
-            <button class="btn-primary" onclick="promoteCarToVip(${car.id})">
-              ${iconSvg("crown")} 9 ₼ ilə VIP Vitrinə Qaldır (-55%)
-            </button>
-          ` : ''}
+        ${_galleryPhotos.length > 1 ? `
+          <div class="detail-thumbs-row">
+            ${_galleryPhotos.map((img, i) => `
+              <img class="detail-thumb-img ${i === 0 ? 'active' : ''}" src="${img}" onclick="setGalleryIndex(${i})" alt="Foto ${i + 1}" />
+            `).join("")}
+          </div>
+        ` : ''}
+
+        <div class="detail-meta-strip">
+          <span>Elan № <strong>${10000 + car.id}</strong></span>
+          <span>•</span>
+          <span>Baxışların sayı: <strong>${car.views || 1}</strong></span>
+          <span>•</span>
+          <span>Tarix: <strong>${(car.created_at || '2026-11-27').slice(0, 10)}</strong></span>
         </div>
       </div>
 
-      <div style="background:#f8fafc;border:1px solid var(--border-color);border-radius:14px;padding:18px;">
-        <h4 style="font-size:0.96rem;font-weight:800;margin-bottom:12px;">Texniki Göstəricilər</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.85rem;">
-          <div style="color:var(--text-muted);">Şəhər:</div><div style="font-weight:700;">${car.city}</div>
-          <div style="color:var(--text-muted);">Marka:</div><div style="font-weight:700;">${car.brand}</div>
-          <div style="color:var(--text-muted);">Model:</div><div style="font-weight:700;">${car.model}</div>
-          <div style="color:var(--text-muted);">Buraxılış ili:</div><div style="font-weight:700;">${car.year}</div>
-          <div style="color:var(--text-muted);">Ban növü:</div><div style="font-weight:700;">${car.body_type}</div>
-          <div style="color:var(--text-muted);">Rəng:</div><div style="font-weight:700;">${car.color}</div>
-          <div style="color:var(--text-muted);">Mühərrik:</div><div style="font-weight:700;">${car.engine_volume} L / ${car.horsepower} a.g. / ${car.fuel_type}</div>
-          <div style="color:var(--text-muted);">Yürüş:</div><div style="font-weight:700;">${car.mileage.toLocaleString()} km</div>
-          <div style="color:var(--text-muted);">Sürətlər qutusu:</div><div style="font-weight:700;">${car.transmission}</div>
-          <div style="color:var(--text-muted);">Ötürücü:</div><div style="font-weight:700;">${car.drivetrain}</div>
-          <div style="color:var(--text-muted);">Yeni:</div><div style="font-weight:700;">${car.is_new || car.mileage === 0 ? 'Bəli (0 km)' : 'Xeyr'}</div>
-          <div style="color:var(--text-muted);">VIN Kod:</div><div style="font-weight:700;color:#38bdf8;">${car.vin_code || 'Yoxlanılıb'}</div>
+      <!-- RIGHT COLUMN: PRICE, SELLER, ACTIONS & CHAT -->
+      <div class="detail-side-card">
+        <div>
+          <div class="detail-price-big">${formatPrice(car.price)}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+            ${car.credit ? `<span class="badge-fin">${iconSvg("bank")} Kredit</span>` : ''}
+            ${car.barter ? `<span class="badge-fin">${iconSvg("refresh")} Barter</span>` : ''}
+            ${car.is_new || car.mileage === 0 ? `<span class="badge-tier badge-new">Yeni (0 km)</span>` : ''}
+          </div>
+        </div>
+
+        <div class="detail-seller-box">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="detail-seller-avatar">${sellerInitials}</div>
+            <div>
+              <div style="font-weight:800;font-size:0.94rem;color:#0f172a;">${car.seller_name}</div>
+              <div style="font-size:0.78rem;color:#64748b;">${car.city} • avtolive.az satıcısı</div>
+            </div>
+          </div>
+          ${isOwner ? `<span class="owner-pill">Sizin elanınız</span>` : ''}
+        </div>
+
+        <a href="tel:${car.seller_phone}" class="btn-success" style="text-decoration:none;justify-content:center;padding:12px 16px;font-size:0.94rem;">
+          ${iconSvg("phone")} Zəng Et: ${car.seller_phone}
+        </a>
+
+        ${isOwner ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button type="button" class="btn-secondary" onclick="closeModal('liveDetailModal');openEditListingModal(${car.id})" style="justify-content:center;">Redaktə Et</button>
+            <button type="button" class="btn-secondary" onclick="closeModal('liveDetailModal');deleteMyListing(${car.id})" style="justify-content:center;color:#dc2626 !important;border-color:#fecaca !important;">Elanı Sil</button>
+          </div>
+        ` : ''}
+
+        <div class="detail-boost-row">
+          <div class="detail-boost-card" onclick="promoteCarToVip(${car.id})">
+            <strong>İrəli çək</strong>
+            <span>3 ₼</span>
+          </div>
+          <div class="detail-boost-card" onclick="promoteCarToVip(${car.id})">
+            <strong>VIP</strong>
+            <span>9 ₼</span>
+          </div>
+          <div class="detail-boost-card" onclick="openPostModal(false, 'premium')">
+            <strong>Premium</strong>
+            <span>29 ₼</span>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #e2e8f0;padding-top:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:800;font-size:0.86rem;color:#0f172a;">${car.is_live ? 'Canlı Yayım Çatı' : 'Satıcıya Sual Yaz'}</span>
+            <span style="font-size:0.74rem;color:#10b981;display:inline-flex;align-items:center;gap:5px;"><span class="status-online-dot"></span> Online</span>
+          </div>
+          <div class="chat-messages" id="liveChatContainer" style="max-height:170px;min-height:95px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;">
+            <div style="color:#64748b;font-size:0.82rem;">Yüklənir...</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <button type="button" class="chip-toggle" style="font-size:0.71rem;padding:4px 8px;" onclick="sendQuickQuestion(${car.id}, 'Salam, maşın bezkraskadır?')">Bezkraskadır?</button>
+            <button type="button" class="chip-toggle" style="font-size:0.71rem;padding:4px 8px;" onclick="sendQuickQuestion(${car.id}, 'Son qiymət nədir və barter mümkündür?')">Son qiymət</button>
+          </div>
+          <form class="chat-input-row" onsubmit="sendLiveChatMessage(event, ${car.id})" style="padding:0;border:none;background:transparent;">
+            <input type="text" class="form-input" id="liveChatInput" placeholder="Mesaj yazın..." required />
+            <button type="submit" class="btn-primary" style="padding:9px 14px;">Göndər</button>
+          </form>
         </div>
       </div>
+    </div>
+
+    <!-- TECHNICAL SPECS & DESCRIPTION -->
+    <div class="detail-specs-section">
+      <div class="detail-specs-2col" style="margin-bottom:20px;">
+        <div class="detail-spec-row"><span>Şəhər</span><span>${car.city}</span></div>
+        <div class="detail-spec-row"><span>Sürətlər qutusu</span><span>${car.transmission}</span></div>
+        <div class="detail-spec-row"><span>Marka</span><span>${car.brand}</span></div>
+        <div class="detail-spec-row"><span>Ötürücü</span><span>${car.drivetrain || 'Tam (AWD)'}</span></div>
+        <div class="detail-spec-row"><span>Model</span><span>${car.model}</span></div>
+        <div class="detail-spec-row"><span>Yeni</span><span>${car.is_new || car.mileage === 0 ? 'Bəli (0 km)' : 'Xeyr'}</span></div>
+        <div class="detail-spec-row"><span>Buraxılış ili</span><span>${car.year}</span></div>
+        <div class="detail-spec-row"><span>Yürüş</span><span>${car.mileage.toLocaleString()} km</span></div>
+        <div class="detail-spec-row"><span>Ban növü</span><span>${car.body_type}</span></div>
+        <div class="detail-spec-row"><span>Rəng</span><span>${car.color}</span></div>
+        <div class="detail-spec-row"><span>Mühərrik</span><span>${car.engine_volume} L / ${car.horsepower} a.g. / ${car.fuel_type}</span></div>
+        <div class="detail-spec-row"><span>VIN Kod</span><span style="color:#2563eb;">${car.vin_code || 'Yoxlanılıb'}</span></div>
+      </div>
+
+      <h4 style="font-size:1rem;font-weight:800;color:#0f172a;margin-bottom:8px;">Avtomobil Haqqında Ətraflı Məlumat</h4>
+      <p style="color:#334155;font-size:0.92rem;line-height:1.65;margin-bottom:16px;">${getDescription(car)}</p>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${(car.features || []).map(f => `<span class="badge-fin" style="padding:6px 12px;font-size:0.79rem;">${iconSvg("check")} ${f}</span>`).join("")}
+      </div>
+    </div>
+
+    <!-- OTHER USERS' LISTINGS AT THE BOTTOM -->
+    <div class="other-listings-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:1.1rem;font-weight:800;color:#0f172a;">Digər İstifadəçilərin Elanları</h3>
+        <span style="font-size:0.82rem;color:#64748b;">${otherCars.length} elan</span>
+      </div>
+      ${otherCars.length ? `
+        <div class="other-listings-grid">
+          ${otherCars.map(oc => `
+            <div class="car-card" onclick="openCarDetail(${oc.id})" style="cursor:pointer;">
+              <div class="car-media" style="height:150px;">
+                <img src="${(oc.images && oc.images[0]) || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=600&q=80'}" alt="${oc.brand} ${oc.model}" />
+                ${oc.is_live ? `<span class="live-ring-badge" style="top:8px;left:8px;padding:3px 8px;font-size:0.68rem;">LIVE</span>` : ''}
+              </div>
+              <div style="padding:12px;">
+                <div class="car-price" style="font-size:1.05rem;">${formatPrice(oc.price)}</div>
+                <div class="car-title" style="font-size:0.9rem;margin:2px 0;">${oc.brand} ${oc.model}</div>
+                <div style="font-size:0.76rem;color:#64748b;">${oc.year} • ${oc.engine_volume} L • ${oc.mileage.toLocaleString()} km</div>
+                <div style="font-size:0.74rem;color:#475569;margin-top:4px;">${oc.seller_name} • ${oc.city}</div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      ` : `
+        <div style="margin-top:12px;padding:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#64748b;font-size:0.86rem;text-align:center;">
+          Hazırda başqa istifadəçi elanı yoxdur — yeni elanlar əlavə olunduqca burada göstəriləcək.
+        </div>
+      `}
     </div>
   `;
 
   document.getElementById("liveDetailModal").classList.add("open");
+  const modalWin = document.querySelector("#liveDetailModal .modal-window");
+  if (modalWin) modalWin.scrollTop = 0;
+
   loadLiveMessages(car.id);
   if (_liveChatPollTimer) clearInterval(_liveChatPollTimer);
   _liveChatPollTimer = setInterval(() => {
@@ -1108,9 +1218,9 @@ async function openCarDetail(id) {
     }
   }, 2500);
   if (car.is_live) {
-    if (isListingOwner(car) && !state.webcamStream) {
+    if (isOwner && !state.webcamStream) {
       startOwnerBroadcast(car.id);
-    } else if (!isListingOwner(car) && !state.webcamStream) {
+    } else if (!isOwner && !state.webcamStream) {
       connectAsLiveViewer(car.id);
     }
   }
