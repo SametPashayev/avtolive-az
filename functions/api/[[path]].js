@@ -122,6 +122,10 @@ async function ensureSchema(db) {
       created_at TEXT NOT NULL
     )
   `).run();
+
+  // Delete existing initial test request (id <= 1) & any completed requests
+  await db.prepare("DELETE FROM service_requests WHERE id <= 1 OR status = 'completed'").run();
+  await db.prepare("DELETE FROM service_bids WHERE request_id <= 1").run();
 }
 
 function parseRequestRow(r, currentUserId = 0, acceptedMasterId = 0) {
@@ -194,8 +198,21 @@ export async function onRequest(context) {
         if (b.status === "accepted") acceptedByReq[b.request_id] = b.master_id;
       });
       const { results: reqRows } = await db.prepare("SELECT * FROM service_requests ORDER BY id DESC").all();
-      const requests = (reqRows || []).map(r => parseRequestRow(r, uid, acceptedByReq[r.id] || 0));
-      const bids = (bidRows || []).map(b => formatBidRow(b, uid));
+      // Visibility rule:
+      // - 'open' requests are visible to everyone
+      // - 'assigned' requests are ONLY visible to the customer (r.user_id === uid) and the accepted master (acceptedByReq[r.id] === uid)
+      const visibleReqRows = (reqRows || []).filter(r => {
+        if (r.status === "open") return true;
+        if (r.status === "assigned" && uid && (r.user_id === uid || acceptedByReq[r.id] === uid)) return true;
+        return false;
+      });
+      const visibleReqIds = new Set(visibleReqRows.map(r => r.id));
+      const requests = visibleReqRows.map(r => {
+        const parsed = parseRequestRow(r, uid, acceptedByReq[r.id] || 0);
+        parsed.accepted_master_id = acceptedByReq[r.id] || 0;
+        return parsed;
+      });
+      const bids = (bidRows || []).filter(b => visibleReqIds.has(b.request_id)).map(b => formatBidRow(b, uid));
       const { results: masterRows } = await db.prepare(`
         SELECT ${USER_COLS} FROM users
         WHERE role = 'master' OR (specialty IS NOT NULL AND specialty != '') OR (salon_name IS NOT NULL AND salon_name != '')
@@ -218,8 +235,13 @@ export async function onRequest(context) {
       const { results: rawBids } = await db.prepare("SELECT * FROM service_bids WHERE request_id = ? ORDER BY price ASC, id ASC").bind(reqId).all();
       const acceptedBid = (rawBids || []).find(b => b.status === "accepted");
       const acceptedMasterId = acceptedBid ? acceptedBid.master_id : 0;
+      if (row.status !== "open" && (!uid || (row.user_id !== uid && acceptedMasterId !== uid))) {
+        return jsonResp({ error: "Bu sorğu üçün artıq usta seçilib və yalnız sifarişçi ilə seçilmiş ustaya görünür." }, 403);
+      }
       const bids = (rawBids || []).map(b => formatBidRow(b, uid));
-      return jsonResp({ request: parseRequestRow(row, uid, acceptedMasterId), bids });
+      const parsed = parseRequestRow(row, uid, acceptedMasterId);
+      parsed.accepted_master_id = acceptedMasterId;
+      return jsonResp({ request: parsed, bids });
     }
   }
 
@@ -453,7 +475,6 @@ export async function onRequest(context) {
 
       const rating = Math.min(5, Math.max(1, parseInt(data.rating) || 5));
       const comment = (data.comment || "İş yüksək səviyyədə görüldü.").trim();
-      await db.prepare("UPDATE service_requests SET status = 'completed' WHERE id = ?").bind(reqId).run();
 
       if (sReq.accepted_bid_id) {
         const bid = await db.prepare("SELECT master_id FROM service_bids WHERE id = ?").bind(sReq.accepted_bid_id).first();
@@ -468,8 +489,10 @@ export async function onRequest(context) {
           }
         }
       }
-      const updatedReq = await db.prepare("SELECT * FROM service_requests WHERE id = ?").bind(reqId).first();
-      return jsonResp({ request: parseRequestRow(updatedReq) });
+      // Permanently delete the completed request and its bids from the database
+      await db.prepare("DELETE FROM service_bids WHERE request_id = ?").bind(reqId).run();
+      await db.prepare("DELETE FROM service_requests WHERE id = ?").bind(reqId).run();
+      return jsonResp({ deleted: true, id: reqId });
     }
 
     if (path === "/api/masters/upgrade-pro") {
@@ -529,4 +552,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-  }
+    }
