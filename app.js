@@ -140,7 +140,7 @@ function renderAll() {
   const masNav = document.getElementById("mastersCountNav");
   if (masNav) masNav.textContent = state.masters.length;
 
-  const mineCount = state.user ? state.requests.filter(r => r.user_id === state.user.id).length : 0;
+  const mineCount = state.user ? state.requests.filter(r => r.user_id === state.user.id || r.accepted_master_id === state.user.id).length : 0;
   const mineNav = document.getElementById("mineCountNav");
   if (mineNav) mineNav.textContent = mineCount;
 
@@ -156,7 +156,7 @@ function applyFilters() {
 
   const list = state.requests.filter(r => {
     if (state.tab === "mine") {
-      if (!state.user || r.user_id !== state.user.id) return false;
+      if (!state.user || (r.user_id !== state.user.id && r.accepted_master_id !== state.user.id)) return false;
     }
     if (cat && r.category !== cat) return false;
     if (city && r.city !== city) return false;
@@ -191,9 +191,7 @@ function renderRequestsGrid(list) {
   grid.innerHTML = list.map(r => {
     const statusBadge = r.status === "open"
       ? `<span class="badge-status-open">● Təklif gözləyir</span>`
-      : r.status === "assigned"
-        ? `<span class="badge-status-assigned">✔ Usta seçildi</span>`
-        : `<span class="badge-cat">★ Tamamlandı</span>`;
+      : `<span class="badge-status-assigned">🔒 Usta seçildi (Yalnız sizə və ustaya görünür)</span>`;
     const isOwner = state.user && r.user_id === state.user.id;
     const reqBids = state.bids.filter(b => b.request_id === r.id);
     const minPrice = reqBids.length ? Math.min(...reqBids.map(b => b.price)) : 0;
@@ -492,7 +490,10 @@ async function openRequestDetail(reqId) {
 
           ${isOwner && req.status === "assigned" ? `
             <div style="margin-top:12px;padding:12px;background:#ecfdf5;border:1px solid #10b981;border-radius:12px;">
-              <strong style="font-size:0.86rem;color:#065f46;display:block;margin-bottom:8px;">İş tamamlandı? Ustanı qiymətləndirin:</strong>
+              <div style="font-size:0.78rem;color:#047857;font-weight:700;margin-bottom:6px;">
+                🔒 Bu sorğu hazırda digər ustalardan gizlədilib — yalnız siz və seçdiyiniz usta görə bilir.
+              </div>
+              <strong style="font-size:0.86rem;color:#065f46;display:block;margin-bottom:8px;">Usta işi tamamladı? Təsdiqləyin (sorğu silinəcək):</strong>
               <div style="display:flex;gap:8px;">
                 <select id="reviewRatingSelect" class="form-select" style="max-width:110px;">
                   <option value="5">★★★★★ (5)</option>
@@ -502,7 +503,7 @@ async function openRequestDetail(reqId) {
                   <option value="1">★ (1)</option>
                 </select>
                 <button type="button" class="btn-emerald" onclick="completeAndRateRequest(${req.id})" style="flex:1;justify-content:center;">
-                  İşi Tamamla & Rəy Ver
+                  Tamamdır — İşi Bitir və Sorğunu Sil
                 </button>
               </div>
             </div>
@@ -607,11 +608,11 @@ async function completeAndRateRequest(reqId) {
     });
     const d = await res.json();
     if (!res.ok) return showToast(d.error || "Xəta baş verdi");
-    const rIdx = state.requests.findIndex(r => r.id === reqId);
-    if (rIdx !== -1 && d.request) state.requests[rIdx] = d.request;
+    state.requests = state.requests.filter(r => r.id !== reqId);
+    state.bids = state.bids.filter(b => b.request_id !== reqId);
+    closeModal("requestDetailModal");
     await initApp();
-    openRequestDetail(reqId);
-    showToast("Sorğu tamamlandı və rəyiniz qeydə alındı!");
+    showToast("İş tamamlandı, usta qiymətləndirildi və sorğu həmişəlik silindi!");
   } catch (err) {
     showToast("Server xətası");
   }
