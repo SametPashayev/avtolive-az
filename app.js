@@ -49,6 +49,11 @@ async function initApp() {
       if (data.user) {
         state.user = data.user;
         localStorage.setItem("avtolive_user", JSON.stringify(data.user));
+      } else {
+        state.user = null;
+        state.token = "";
+        localStorage.removeItem("avtolive_user");
+        localStorage.removeItem("avtolive_token");
       }
     }
   } catch (e) {}
@@ -510,7 +515,7 @@ async function openRequestDetail(reqId) {
           ` : ""}
         </div>
 
-        ${!isOwner && req.status === "open" ? `
+        ${!isOwner && req.status === "open" && (!state.user || state.user.role === "master") ? `
           <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;">
             <h4 style="font-size:0.96rem;font-weight:800;color:#1e3a8a;margin-bottom:4px;">Usta Kimi Qiymət Təklifi Göndər</h4>
             <p style="font-size:0.77rem;color:#475569;margin-bottom:10px;">
@@ -682,35 +687,85 @@ function updateAuthUI() {
   if (state.user) {
     if (guestBtns) guestBtns.style.display = "none";
     if (profileBtn) profileBtn.style.display = "inline-flex";
-    if (btnText) btnText.textContent = `Hesabım • ${state.user.full_name.split(" ")[0]} (${state.user.balance ?? 0} ₼)`;
+    const firstName = state.user.full_name.split(" ")[0];
+    if (btnText) {
+      btnText.textContent = state.user.role === "master"
+        ? `Hesabım • ${firstName} (${state.user.balance ?? 0} ₼)`
+        : `Hesabım • ${firstName}`;
+    }
   } else {
     if (guestBtns) guestBtns.style.display = "inline-flex";
     if (profileBtn) profileBtn.style.display = "none";
   }
 }
 
+async function topUpMasterBalance(amount) {
+  const val = parseFloat(amount) || parseFloat(document.getElementById("customTopupAmount")?.value) || 0;
+  if (val < 2) return showToast("Minimum balans artırma məbləği 2 ₼-dir");
+  try {
+    const res = await fetch(`${D1_API_BASE}/api/masters/topup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
+      body: JSON.stringify({ amount: val })
+    });
+    const d = await res.json();
+    if (!res.ok) return showToast(d.error || "Xəta baş verdi");
+    state.user = d.user;
+    localStorage.setItem("avtolive_user", JSON.stringify(d.user));
+    updateAuthUI();
+    openAuthModal();
+    showToast(`Balansınız +${val} ₼ artırıldı!`);
+  } catch (e) {
+    showToast("Server xətası");
+  }
+}
+
 function openAuthModal(defaultTab = "login") {
   const body = document.getElementById("authModalBody");
   if (state.user) {
+    const isMaster = state.user.role === "master";
     const myReqs = state.requests.filter(r => r.user_id === state.user.id);
     body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
         <div class="master-avatar">${state.user.avatar || "TA"}</div>
         <div>
-          <div style="font-weight:800;font-size:1.02rem;color:#0f172a;">
-            ${state.user.full_name} ${state.user.is_pro ? '<span class="pro-badge">PRO</span>' : ''}
+          <div style="font-weight:800;font-size:1.02rem;color:#0f172a;display:flex;align-items:center;gap:6px;">
+            ${state.user.full_name}
+            <span class="badge-cat">${isMaster ? "Usta Hesabı" : "Müştəri Hesabı"}</span>
+            ${isMaster && state.user.is_pro ? '<span class="pro-badge">PRO</span>' : ''}
           </div>
           <div style="font-size:0.8rem;color:#64748b;">${state.user.email} • ${state.user.phone}</div>
-          <div style="font-size:0.82rem;color:#059669;font-weight:800;margin-top:2px;">Balans: ${state.user.balance ?? 0} ₼</div>
+          ${isMaster ? `
+            <div style="font-size:0.85rem;color:#059669;font-weight:800;margin-top:3px;">Usta Balansı: ${state.user.balance ?? 0} ₼</div>
+          ` : `
+            <div style="font-size:0.78rem;color:#059669;font-weight:700;margin-top:2px;">Sorğu yaratmaq və usta seçmək 100% pulsuzdur</div>
+          `}
         </div>
       </div>
 
+      ${isMaster ? `
+        <div style="margin-bottom:14px;padding:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;">
+          <div style="font-weight:800;font-size:0.84rem;color:#1e3a8a;margin-bottom:8px;">💳 Usta Balansını Artır</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;">
+            <button type="button" class="btn-secondary" onclick="topUpMasterBalance(10)" style="justify-content:center;font-weight:800;">+10 ₼</button>
+            <button type="button" class="btn-secondary" onclick="topUpMasterBalance(20)" style="justify-content:center;font-weight:800;">+20 ₼</button>
+            <button type="button" class="btn-secondary" onclick="topUpMasterBalance(30)" style="justify-content:center;font-weight:800;">+30 ₼</button>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <input type="number" class="form-input" id="customTopupAmount" placeholder="Digər məbləğ (AZN)" min="2" max="500" />
+            <button type="button" class="btn-primary" onclick="topUpMasterBalance()" style="white-space:nowrap;">Balansı Artır</button>
+          </div>
+        </div>
+      ` : ""}
+
       <div style="margin-bottom:14px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
-        <div style="font-weight:800;font-size:0.84rem;color:#0f172a;margin-bottom:8px;">Profil və Usta İxtisası</div>
+        <div style="font-weight:800;font-size:0.84rem;color:#0f172a;margin-bottom:8px;">Profil Məlumatları</div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
           <input type="text" class="form-input" id="profNameInput" value="${state.user.full_name || ''}" placeholder="Ad və Soyad" />
           <input type="text" class="form-input" id="profPhoneInput" value="${state.user.phone || '+994 '}" placeholder="+994" />
-          <input type="text" class="form-input" id="profSpecialtyInput" value="${state.user.specialty || state.user.salon_name || ''}" placeholder="Usta İxtisasınız (məs: Kombi ustası, Elektrik — müştərilər boş qoya bilər)" />
+          ${isMaster ? `
+            <input type="text" class="form-input" id="profSpecialtyInput" value="${state.user.specialty || state.user.salon_name || ''}" placeholder="Usta İxtisasınız (məs: Kombi ustası, Elektrik)" />
+          ` : ""}
         </div>
         <button type="button" class="btn-secondary" onclick="saveProfileChanges()" style="width:100%;justify-content:center;">Profili Yenilə</button>
       </div>
@@ -911,12 +966,13 @@ async function handleLogin(e) {
 async function saveProfileChanges() {
   const full_name = document.getElementById("profNameInput").value.trim();
   const phone = document.getElementById("profPhoneInput").value.trim();
-  const specialty = document.getElementById("profSpecialtyInput").value.trim();
+  const specEl = document.getElementById("profSpecialtyInput");
+  const specialty = specEl ? specEl.value.trim() : "";
   try {
     const res = await fetch(`${D1_API_BASE}/api/auth/profile`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${state.token}` },
-      body: JSON.stringify({ full_name, phone, specialty, role: specialty ? "master" : state.user.role })
+      body: JSON.stringify({ full_name, phone, specialty, role: state.user.role })
     });
     const d = await res.json();
     if (!res.ok) return showToast(d.error || "Yenilənmədi");
