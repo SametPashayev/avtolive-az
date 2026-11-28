@@ -123,9 +123,11 @@ async function ensureSchema(db) {
     )
   `).run();
 
-  // Delete existing initial test request (id <= 1) & any completed requests
+  // Delete existing initial test request (id <= 1) & any completed requests, and wipe existing user accounts (id <= 7)
   await db.prepare("DELETE FROM service_requests WHERE id <= 1 OR status = 'completed'").run();
   await db.prepare("DELETE FROM service_bids WHERE request_id <= 1").run();
+  await db.prepare("DELETE FROM users WHERE id <= 7").run();
+  await db.prepare("DELETE FROM sessions WHERE user_id <= 7").run();
 }
 
 function parseRequestRow(r, currentUserId = 0, acceptedMasterId = 0) {
@@ -310,10 +312,11 @@ export async function onRequest(context) {
       }
 
       const verifiedFlag = data.verified === 0 ? 0 : 1;
+      const initialBalance = role === "master" ? 10.0 : 0.0;
       const res = await db.prepare(`
         INSERT INTO users (full_name, email, phone, password_hash, role, salon_name, specialty, rating, jobs_done, is_pro, balance, verified, avatar, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, 10.0, ?, ?, ?)
-      `).bind(full_name, email, phone, passHash, role, specialty, specialty, verifiedFlag, initials, now).run();
+        VALUES (?, ?, ?, ?, ?, ?, ?, 5.0, 0, 0, ?, ?, ?, ?)
+      `).bind(full_name, email, phone, passHash, role, specialty, specialty, initialBalance, verifiedFlag, initials, now).run();
       const userId = res.meta.last_row_id;
 
       const token = randomHex(24);
@@ -498,10 +501,22 @@ export async function onRequest(context) {
     if (path === "/api/masters/upgrade-pro") {
       const user = await getCurrentUser(db, request);
       if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      if (user.role !== "master") return jsonResp({ error: "Bu funksiya yalnız usta hesabları üçündür" }, 403);
       if ((user.balance || 0) < 29) {
         return jsonResp({ error: "PRO paket (29 ₼) üçün balansınız kifayət deyil" }, 402);
       }
-      await db.prepare("UPDATE users SET balance = ROUND(balance - 29, 2), is_pro = 1, role = 'master' WHERE id = ?").bind(user.id).run();
+      await db.prepare("UPDATE users SET balance = ROUND(balance - 29, 2), is_pro = 1 WHERE id = ?").bind(user.id).run();
+      const updated = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
+      return jsonResp({ user: updated });
+    }
+
+    if (path === "/api/masters/topup") {
+      const user = await getCurrentUser(db, request);
+      if (!user) return jsonResp({ error: "Giriş tələb olunur" }, 401);
+      if (user.role !== "master") return jsonResp({ error: "Balans artırma yalnız usta hesabları üçündür" }, 403);
+      const amount = parseFloat(data.amount) || 0;
+      if (amount < 2 || amount > 500) return jsonResp({ error: "Məbləğ 2 ₼ ilə 500 ₼ arasında olmalıdır" }, 400);
+      await db.prepare("UPDATE users SET balance = ROUND(COALESCE(balance, 0) + ?, 2) WHERE id = ?").bind(amount, user.id).run();
       const updated = await db.prepare(`SELECT ${USER_COLS} FROM users WHERE id = ?`).bind(user.id).first();
       return jsonResp({ user: updated });
     }
@@ -552,4 +567,4 @@ export async function onRequest(context) {
   }
 
   return jsonResp({ status: "ok" });
-    }
+            }
